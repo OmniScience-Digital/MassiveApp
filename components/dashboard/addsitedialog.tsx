@@ -141,9 +141,9 @@ const InputModal: React.FC<InputModalProps> = ({ isOpen, reporttype, onClose, on
               <SelectValue placeholder="Site Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Iot Based">IOT Based</SelectItem>
-              <SelectItem value="Plc Based">PLC Based</SelectItem>
-              <SelectItem value="Iot and Plc Based">IOT and PLC Based</SelectItem>
+              <SelectItem value="iot">IOT Based</SelectItem>
+              <SelectItem value="plc">PLC Based</SelectItem>
+              <SelectItem value="iotnplc">IOT and PLC Based</SelectItem>
             </SelectContent>
           </Select>
           <Select value={scaleType} onValueChange={setScaleType}>

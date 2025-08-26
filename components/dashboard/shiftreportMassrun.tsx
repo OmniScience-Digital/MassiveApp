@@ -24,11 +24,6 @@ export function SiteControls({ stopTimes }: { stopTimes: StopTimesState }) {
 
         try {
 
-            console.log("Running report:", {
-                time: selectedTime,
-                type: reportType,
-                status: siteStatus
-            });
             await MassrunShiftReport(selectedTime as string, reportType as string, siteStatus as string);
 
         } catch (error) {

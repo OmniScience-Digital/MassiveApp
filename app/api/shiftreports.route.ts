@@ -80,7 +80,7 @@ export const MassrunShiftReport = async (
 ) => {
   try {
 
-    const response = await fetch(`${constants.baseUrl}/masstelegramshiftroute`, {
+    const response = await fetch(`${constants.securebaseUrltest}/masstelegramshiftroute`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

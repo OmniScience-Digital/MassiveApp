@@ -500,23 +500,9 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
       setLoadingBtn2(true);
 
   
-      //await createOrUpdateInputValueTable(id, payload);
-      await savePurpleFiguresData(id, purpleFigurePayload);
-      //       const toAWSDate = (dateStr: string) => {
-      //   const d = new Date(dateStr);
-      //   const pad = (num: number) => num.toString().padStart(2, '0');
-      //   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      // };
-
-      // const awsDate =toAWSDate('2025/08/03');
-      //          const { data: dateMatches } = await client.models.Purplefigures.list({
-      //           filter: {
-      //             date: { eq: awsDate } // Uses your date index
-      //           },
-      //           // limit: 100 // Adjust based on daily record volume
-      //         });
-
-      //     console.log(awsDate)
+      await createOrUpdateInputValueTable(id, payload);
+      //await savePurpleFiguresData(id, purpleFigurePayload);
+    
 
       setMessage(`Input values and Purple figures saved.`);
       setShow(true);

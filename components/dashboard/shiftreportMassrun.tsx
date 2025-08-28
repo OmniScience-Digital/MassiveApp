@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { TestTube2, Zap } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { MassrunShiftReport } from "@/app/api/shiftreports.route";
 
@@ -17,19 +17,21 @@ interface StopTimesState {
 export function SiteControls({ stopTimes }: { stopTimes: StopTimesState }) {
     const [selectedTime, setSelectedTime] = useState<string>("");
     const [reportType, setReportType] = useState<"day" | "night" | "extra">("day");
-    const [siteStatus, setSiteStatus] = useState<"test" | "prod">("prod");
-
+    const [siteStatus, setSiteStatus] = useState<"test" | "prod">("test");
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleRunReport = async () => {
-
+        setIsLoading(true);
         try {
+             // simulate 2 min delay
+         await new Promise(resolve => setTimeout(resolve, 2 * 60 * 1000));
 
             await MassrunShiftReport(selectedTime as string, reportType as string, siteStatus as string);
-
         } catch (error) {
-
+            console.log(error);
+        } finally {
+            setIsLoading(false);
         }
-
     };
 
     const getAvailableTimes = () => {
@@ -113,33 +115,38 @@ export function SiteControls({ stopTimes }: { stopTimes: StopTimesState }) {
             {/* Run Buttons */}
             <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium opacity-0">Run</Label>
-
                 <div className="flex gap-2">
-                    <Button
-                        onClick={handleRunReport}
-                        disabled={!selectedTime || availableTimes.length === 0}
-                        size="sm"
-                        variant={siteStatus === "test" ? "default" : "outline"}
-                        className="gap-1 h-9"
-                    >
-                        <TestTube2 className="h-3 w-3" />
-                        Run Dev
-                    </Button>
-                    <Button
-                        onClick={handleRunReport}
-                        disabled={!selectedTime || availableTimes.length === 0 || siteStatus !== "prod"}
-                        size="sm"
-                        className="gap-1 h-9"
-                    >
-                        <Zap className="h-3 w-3" />
-                        Run Prod
-                    </Button>
-
-
+                    {siteStatus === "test" && (
+                        <Button
+                            onClick={handleRunReport}
+                            disabled={!selectedTime || availableTimes.length === 0 || isLoading}
+                            size="sm"
+                            variant="default"
+                            className="gap-1 h-9"
+                        >
+                            Run Dev
+                            {isLoading &&(
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            )}
+                            
+                        </Button>
+                    )}
+                    {siteStatus === "prod" && (
+                        <Button
+                            onClick={handleRunReport}
+                            disabled={!selectedTime || availableTimes.length === 0 || isLoading}
+                            size="sm"
+                            variant="default"
+                            className="gap-1 h-9"
+                        >
+                            Run Prod
+                            {isLoading && (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            )}
+                            
+                        </Button>
+                    )}
                 </div>
-
-
-
             </div>
 
             {/* Status Badge */}

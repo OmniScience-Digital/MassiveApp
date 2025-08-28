@@ -224,7 +224,7 @@ const AuditingDashboard = () => {
 
                 if (reportData) {
 
-                    if (reportData.siteConstants.siteType === 'Iot Based' && Array.isArray(parsedScales)) {
+                    if ((reportData.siteConstants.siteType === 'Iot Based'||reportData.siteConstants.siteType.toLowerCase().replace(/\s+/g, '') === 'iot') && Array.isArray(parsedScales)) {
                         const scaleNameMap = Object.fromEntries(
                             reportData.scales.map(({ iccid, scalename }) => [iccid, scalename])
                         );

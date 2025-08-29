@@ -16,6 +16,7 @@ import { createOrUpdateInputValueTable } from '@/service/inputvalues.service';
 import { client } from '@/service/schemaClient';
 import ResponseModal from '../response';
 
+
 interface RuntimeData {
   hour: string;
   totalDeltaSum: number;
@@ -73,6 +74,13 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
   const [allInputValues, setAllInputValues] = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [allCalculatedValues, setAllCalculatedValues] = useState<Record<string, Record<string, Record<string, number>>>>({});
   const [selectedDate, setSelectedDate] = useState<string>(''); // State for selected date
+
+
+  //state variables for input csv export
+  const [exportInputStartDate, setExportInputStartDate] = useState<string>('');
+  const [exportInputEndDate, setExportInputEndDate] = useState<string>('');
+
+
   const tableRef = useRef<HTMLDivElement>(null);
   const currentIccid = allIccids[currentIccidIndex];
   const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
@@ -469,6 +477,17 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
       };
       setAllInputValues(updatedAllInputValues);
 
+      // Convert to Date objects for proper sorting
+      const sortedDates: string[] = dates
+        .map((date: string) => new Date(date))
+        .sort((a: Date, b: Date) => a.getTime() - b.getTime())
+        .map((date: Date) => date.toISOString().split('T')[0]);
+
+      const firstdate: string = sortedDates[0];
+      const lastdate: string = sortedDates[sortedDates.length - 1];
+
+
+
       const payload = {
         timestamp: new Date().toISOString(),
         data: allIccids.map(iccid => ({
@@ -477,32 +496,24 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
         }))
       };
 
-      const purpleFigurePayload = allIccids.flatMap(iccid => {
-        const calculatedValues = allCalculatedValues[iccid] || {};
-        return Object.entries(calculatedValues).map(([date, hourValues]) => ({
-          siteId: id,
-          iccid: iccid,
-          date,
-          hourValues:hourValues??{},
-          timestamp: new Date().toISOString()
-        }));
-      });
 
+      const purpleFigurePayload = {
+        timestamp: new Date().toISOString(),
+        firstdate: firstdate,
+        lastdate: lastdate,
+        data: allIccids.map(iccid => ({
+          iccid,
+          purpleValues: allCalculatedValues[iccid] || {},
+        }))
+      };
+      console.log('purpleFigurePayload');
+      console.log(purpleFigurePayload);
 
-      if (purpleFigurePayload.length < 1) {
-        setMessage(`Calculate Purple figures for all scales`);
-        setShow(true);
-        setSuccessful(false);
-        setLoadingBtn2(false);
-        return;
-      }
       setLoadingBtn2(true);
 
-  
       await createOrUpdateInputValueTable(id, payload);
-      
 
-    
+      
       setMessage(`Input values and Purple figures saved.`);
       setShow(true);
       setSuccessful(true);
@@ -515,6 +526,8 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
       console.error(error);
     }
   };
+
+  //purple figures export
 
   const exportToCSV = () => {
     const dayTotals = dates.map((date, dateIndex) => {
@@ -662,6 +675,71 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
     const link = document.createElement("a");
     link.href = url;
     link.download = `${dashboardname}_Purple_Figures_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  //input figures export
+
+  const exportInputTableToCSV = (): void => {
+    // Get the currently visible ICCID(s)
+    const visibleIccids: string[] = viewMode === 'single' ? [currentIccid] : allIccids;
+
+    // Get the currently visible dates (filtered by date range if specified)
+    let visibleDates: string[] = dates;
+    if (exportInputStartDate && exportInputEndDate) {
+      visibleDates = dates.filter(date => {
+        const dateObj = new Date(date);
+        const startObj = new Date(exportInputStartDate);
+        const endObj = new Date(exportInputEndDate);
+        return dateObj >= startObj && dateObj <= endObj;
+      });
+    }
+
+    // Prepare CSV content
+    const header = ["Site Name", "ICCID", "Date", "Hour", "Input Value"];
+    const rows: string[][] = [];
+
+    // Add data rows
+    visibleIccids.forEach(iccid => {
+      const inputData = viewMode === 'single' ? inputValues : allInputValues[iccid] || {};
+
+      visibleDates.forEach(date => {
+        hours.forEach(hour => {
+          const value = inputData[date]?.[hour] || '';
+          rows.push([
+            dashboardname,
+            iccid,
+            date,
+            hour,
+            value
+          ]);
+        });
+      });
+    });
+
+    // Create CSV content
+    const csvContent = [
+      header.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    // Create filename with site name and date range
+    let fileName = `${dashboardname}_Input_Table`;
+    if (exportInputStartDate && exportInputEndDate) {
+      fileName += `_${exportInputStartDate}_to_${exportInputEndDate}`;
+    } else if (visibleDates.length > 0) {
+      fileName += `_${visibleDates[0]}_to_${visibleDates[visibleDates.length - 1]}`;
+    }
+    fileName += `.csv`;
+
+    link.download = fileName;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -1182,7 +1260,7 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
                         pattern="^[0-9]*[.,]?[0-9]*$"
                         value={inputValues[date]?.[hour] ?? ''}
                         onChange={(e) => handleInputChange(date, hour, e.target.value)}
-                        className={`w-20 text-center p-1 text-sm border rounded-md ${isAutoFilled ? 'bg-green-100' : 'bg-gray-500'} ${isSelected ? 'ring-2 ring-blue-200' : ''}`}
+                        className={`w-20 text-center p-1 text-sm border text-gray-300 rounded-md ${isAutoFilled ? 'bg-green-100' : 'bg-gray-500'} ${isSelected ? 'ring-2 ring-blue-200' : ''}`}
                       />
                     </TableCell>
                   );
@@ -1267,13 +1345,54 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
       ) : (
         <AllIccidsPurpleFigures />
       )}
+      {/* Input Table export section */}
 
-      {/* Export Section */}
-      <div className="mx-4 mt-4 space-y-4">
+      <div className="mx-4 mt-4 space-y-4 p-4 border rounded-lg bg-gray-50">
+        <h3 className="text-lg font-semibold">Export Input Table</h3>
+
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium w-24">Date Range:</label>
+            <input
+              type="date"
+              value={exportInputStartDate}
+              onChange={(e) => setExportInputStartDate(e.target.value)}
+              className="border rounded p-2 text-sm"
+            />
+            <span>to</span>
+            <input
+              type="date"
+              value={exportInputEndDate}
+              onChange={(e) => setExportInputEndDate(e.target.value)}
+              className="border rounded p-2 text-sm"
+            />
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={exportInputTableToCSV}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
+            >
+              Download Input Table as CSV
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            The CSV will include: Site Name, ICCID, Date, Hour, and Input Value.
+            {exportInputStartDate && exportInputEndDate
+              ? ` Filtered from ${exportInputStartDate} to ${exportInputEndDate}.`
+              : ' Includes all available dates.'}
+          </p>
+        </div>
+      </div>
+
+      {/* Export Purple figures Section */}
+      <div className="mx-4 mt-4 space-y-4 p-4 border rounded-lg bg-gray-50">
+        <h3 className="text-lg font-semibold">Export Purple Figures</h3>
         <div className="flex space-x-4">
           <Button
             onClick={viewMode === 'single' ? exportToCSV : exportAllToCSV}
-            className="bg-slate-400 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
           >
             Export total Period
           </Button>

@@ -29,18 +29,20 @@ const schema = a.schema({
     .authorization((allow) => [allow.publicApiKey()]),
 
   Purplefigures: a
-    .model({
-      siteId: a.string().required(),
-      timestamp: a.string(),
-      firstdate: a.string().required(), // '2025-07-25'
-      lastdate: a.string().required(),  // '2025-08-28'
-      data: a.json(), // JSON array: [{ iccid: string, purpleValues: {} }]
-    }).secondaryIndexes((index) => [
-      index("siteId"),
-      index("firstdate"),
-      index("lastdate")
-    ])
-    .authorization((allow) => [allow.publicApiKey()])
+  .model({
+  siteId: a.string().required(),
+  iccid: a.string().required(),
+  date: a.string().required(),    // '2025-08-14'
+  purpleValues: a.json(),         // { '00:00': '...', '01:00': '...' }
+})
+.secondaryIndexes((index) => [
+  index("siteId"),
+  index("iccid"),
+  index("date"),
+])
+.authorization((allow) => [allow.publicApiKey()])
+
+  
 })
 
 export type Schema = ClientSchema<typeof schema>;

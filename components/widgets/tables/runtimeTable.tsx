@@ -15,7 +15,6 @@ import { useParams } from 'next/navigation';
 import { createOrUpdateInputValueTable } from '@/service/inputvalues.service';
 import { client } from '@/service/schemaClient';
 import ResponseModal from '../response';
-import { savePurpleFiguresData } from '@/service/purplefigures.service';
 
 interface RuntimeData {
   hour: string;
@@ -43,7 +42,7 @@ type CellSelection = {
   active: boolean;
 };
 
-const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
+const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
   const dashboardname = decodeURIComponent(params.name as string).toUpperCase();
@@ -501,9 +500,9 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
 
   
       await createOrUpdateInputValueTable(id, payload);
-      //await savePurpleFiguresData(id, purpleFigurePayload);
-    
+      
 
+    
       setMessage(`Input values and Purple figures saved.`);
       setShow(true);
       setSuccessful(true);
@@ -1332,7 +1331,7 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
   );
 };
 
-export default RuntimeTableTest;
+export default RuntimeTable;
 
 function hasValidDate(dayData: RuntimesAudit): dayData is RuntimesAudit & { date: string } {
   return dayData.date !== null;

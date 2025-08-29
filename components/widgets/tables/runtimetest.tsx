@@ -3,8 +3,8 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
+  TableHead,
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -54,20 +54,15 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
 
   const [customPreset, setCustomPreset] = useState('');
   const [loadinbtn, setLoadingBtn] = useState(false);
-
   const [loadinbtn2, setLoadingBtn2] = useState(false);
   const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
-
-  //error displays
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState('');
-
   const [exportDate, setExportDate] = useState<string>('');
   const [shiftStart, setShiftStart] = useState<string>('');
   const [shiftEnd, setShiftEnd] = useState<string>('');
-
-  //tables hooks
+  const [open, setOpen] = useState(false);
   const [currentIccidIndex, setCurrentIccidIndex] = useState(0);
   const [inputValues, setInputValues] = useState<Record<string, Record<string, string>>>({});
   const [calculatedValues, setCalculatedValues] = useState<Record<string, Record<string, number>>>({});
@@ -76,118 +71,133 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [cellSelection, setCellSelection] = useState<CellSelection>({ start: null, end: null, active: false });
   const [lastAction, setLastAction] = useState<'manual' | 'auto-fill' | 'preset' | 'bulk'>('manual');
-  const tableRef = useRef<HTMLDivElement>(null);
+  const [allInputValues, setAllInputValues] = useState<Record<string, Record<string, Record<string, string>>>>({});
+  const [allCalculatedValues, setAllCalculatedValues] = useState<Record<string, Record<string, Record<string, number>>>>({});
+  const [selectedDate, setSelectedDate] = useState<string>(''); // State for selected date
 
+
+  //state variables for input csv export
+  const [exportInputStartDate, setExportInputStartDate] = useState<string>('');
+  const [exportInputEndDate, setExportInputEndDate] = useState<string>('');
+
+
+  const tableRef = useRef<HTMLDivElement>(null);
   const currentIccid = allIccids[currentIccidIndex];
   const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 
-  // Update  state to store all ICCID data
-  const [allInputValues, setAllInputValues] = useState<Record<string, Record<string, Record<string, string>>>>({});
-  const [allCalculatedValues, setAllCalculatedValues] = useState<Record<string, Record<string, Record<string, number>>>>({});
+  // Function to normalize ICCID
+  const normalize = (id: string): string => id.replace(/[-_]/g, '');
 
-
-  const getSiteTableValues = async () => {
+  // Fetch site table values
+  const getSiteTableValues = async (siteId: string) => {
     try {
-
-      const { data: inputvalues, errors } = await client.models.InputValueTable.list({
-        filter: {
-          siteId: { eq: id }
-
-        }
-      });
+      const { data: inputvalues, errors } = await client.models.InputValueTable.listInputValueTableBySiteId({ siteId });
 
       if (errors) {
         console.error("Error fetching site:", errors);
         setMessage(`Error fetching site: ${errors}`);
         setShow(true);
         setSuccessful(false);
-        return null;
+        return [];
       }
 
-
-      return inputvalues.map((inputvalue => {
+      return inputvalues.map((inputvalue) => {
         let parsedTablevalues: any[] = [];
         try {
-
           if (typeof inputvalue.data === 'string') {
             const clean = inputvalue.data.replace(/\\"/g, '"').replace(/^"+|"+$/g, '');
             parsedTablevalues = JSON.parse(clean);
-
           } else if (Array.isArray(inputvalue.data)) {
             parsedTablevalues = inputvalue.data;
           }
-
         } catch (error) {
           parsedTablevalues = [];
-
         }
         return {
           id: inputvalue.siteId,
           data: parsedTablevalues,
           timestamp: inputvalue.timestamp,
-        }
-
-      }))
+        };
+      });
     } catch (error) {
-      console.log(error)
+      console.error("Error in getSiteTableValues:", error);
+      return [];
     }
+  };
 
-  }
+  // Fetch input values and update state
+  const fetchInputValues = async () => {
+    try {
+      const iccidInputValues = await getSiteTableValues(id);
+      if (!iccidInputValues || iccidInputValues.length === 0) {
+        setMessage("No input values found for the site.");
+        setShow(true);
+        setSuccessful(false);
+        return;
+      }
 
-  //on first page render
+      const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
 
-  useEffect(() => {
-
-
-    // Modified fetchInputvalues function
-    async function fetchInputvalues() {
-      try {
-        const iccidInputValues = await getSiteTableValues();
-        if (!iccidInputValues || iccidInputValues.length === 0) return;
-
-        // Initialize a structure to hold all ICCID input values
-        const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
-
-        // Process each ICCID's data
-        iccidInputValues[0].data.forEach((item: any) => {
+      iccidInputValues.forEach((entry: any) => {
+        entry.data.forEach((item: any) => {
           const iccid = item.iccid;
           if (!loadedInputValues[iccid]) {
             loadedInputValues[iccid] = {};
           }
 
-          // Load the input values for each date
           Object.entries(item.inputValues).forEach(([date, hourValues]) => {
             if (!loadedInputValues[iccid][date]) {
               loadedInputValues[iccid][date] = {};
             }
 
             Object.entries(hourValues as Record<string, string>).forEach(([hour, value]) => {
-              loadedInputValues[iccid][date][hour] = value;
+              if (!loadedInputValues[iccid][date][hour] || loadedInputValues[iccid][date][hour] === "") {
+                loadedInputValues[iccid][date][hour] = value;
+              }
             });
           });
         });
+      });
 
-        // Update the state with all loaded values
-        setAllInputValues(loadedInputValues);
+      // Update allInputValues with fetched data
+      setAllInputValues(prev => ({
+        ...prev,
+        ...loadedInputValues,
+      }));
 
-        // If current ICCID has data, load it into the input table
-        if (currentIccid && loadedInputValues[currentIccid]) {
-          setInputValues(loadedInputValues[currentIccid]);
-        }
+      // Update inputValues for the current ICCID
+      const normalizedCurrent = normalize(currentIccid);
+      const matchedKey = Object.keys(loadedInputValues).find(
+        (key) => normalize(key) === normalizedCurrent
+      );
 
-      } catch (error) {
-        console.log(error);
+      if (matchedKey && loadedInputValues[matchedKey]) {
+        setInputValues(loadedInputValues[matchedKey]);
+      } else {
+        setInputValues({});
       }
+    } catch (error) {
+      console.error("Error in fetchInputValues:", error);
+      setMessage(`Failed to fetch input values: ${error}`);
+      setShow(true);
+      setSuccessful(false);
     }
+  };
 
-
-    fetchInputvalues();
-  }, [])
-
-  // load stored data when switching ICCIDs
+  // Fetch data on mount and when id or selectedDate changes
   useEffect(() => {
-    if (allInputValues[currentIccid]) {
-      setInputValues(allInputValues[currentIccid]);
+    fetchInputValues();
+  }, [id, selectedDate]);
+
+  // Update inputValues and calculatedValues when currentIccid changes
+  useEffect(() => {
+    const normalizedCurrent = normalize(currentIccid);
+    const matchedKey = Object.keys(allInputValues).find(
+      (key) => normalize(key) === normalizedCurrent
+    );
+
+    if (matchedKey && allInputValues[matchedKey]) {
+      setInputValues(allInputValues[matchedKey]);
     } else {
       setInputValues({});
     }
@@ -197,8 +207,803 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
     } else {
       setCalculatedValues({});
     }
-  }, [currentIccid]);
+  }, [currentIccid, allInputValues, allCalculatedValues]);
 
+  // Generate date-hour values mapping
+  const dateToHourValues = iccidRuntimes.reduce((acc, dayData) => {
+    const date = dayData.date;
+    if (!date) return acc;
+
+    const scale = dayData.scales.find((s) => s.iccid === currentIccid);
+    if (!scale) return acc;
+
+    if (!acc[date]) {
+      acc[date] = {};
+    }
+
+    scale.runtime
+      .filter((r): r is RuntimeData => typeof r.totalDeltaSum === 'number' && !isNaN(r.totalDeltaSum))
+      .forEach(({ hour, totalDeltaSum }) => {
+        const current = acc[date][hour];
+        if (current === undefined) {
+          acc[date][hour] = totalDeltaSum;
+        }
+      });
+
+    return acc;
+  }, {} as Record<string, Record<string, number>>);
+
+  const dates = Object.keys(dateToHourValues);
+
+  const handleExportDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setExportDate(e.target.value);
+  };
+
+  const handleShiftStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setShiftStart(e.target.value);
+  };
+
+  const handleShiftEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setShiftEnd(e.target.value);
+  };
+
+  const saveToHistory = (currentState: Record<string, Record<string, string>>) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(JSON.parse(JSON.stringify(currentState)));
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const handleInputChange = (date: string, hour: string, value: string) => {
+    const newValues = {
+      ...inputValues,
+      [date]: {
+        ...inputValues[date],
+        [hour]: value,
+      },
+    };
+
+    setInputValues(newValues);
+    setLastAction('manual');
+
+    if (!cellSelection.active) {
+      saveToHistory(newValues);
+    }
+  };
+
+  const applyPreset = (value: number) => {
+    let newValues = JSON.parse(JSON.stringify(inputValues));
+    const presetValue = value.toString();
+
+    if (isSelectionActive()) {
+      const { start, end } = getNormalizedSelection();
+      for (let d = dates.indexOf(start.date); d <= dates.indexOf(end.date); d++) {
+        const date = dates[d];
+        for (let h = hours.indexOf(start.hour); h <= hours.indexOf(end.hour); h++) {
+          const hour = hours[h];
+          if (!newValues[date]) newValues[date] = {};
+          newValues[date][hour] = presetValue;
+        }
+      }
+    } else {
+      dates.forEach(date => {
+        hours.forEach(hour => {
+          if (!newValues[date]?.[hour]) {
+            if (!newValues[date]) newValues[date] = {};
+            newValues[date][hour] = presetValue;
+          }
+        });
+      });
+    }
+
+    setInputValues(newValues);
+    saveToHistory(newValues);
+    setLastAction('preset');
+  };
+
+  const handleCalculate = () => {
+    setLoadingBtn(true);
+    const result: Record<string, Record<string, number>> = {};
+
+    for (const date of dates) {
+      result[date] = {};
+      for (const hour of hours) {
+        const runtimeVal = dateToHourValues[date]?.[hour];
+        const inputVal = inputValues[date]?.[hour];
+
+        const parsedInput = parseFloat(inputVal || '0') || 0;
+        const multiplier = inputVal === '' ? 0 : parsedInput;
+        const value = typeof runtimeVal === 'number' ? runtimeVal * multiplier : 0;
+
+        result[date][hour] = value;
+      }
+    }
+
+    setCalculatedValues(result);
+    setAllCalculatedValues(prev => ({
+      ...prev,
+      [currentIccid]: result
+    }));
+    setLoadingBtn(false);
+  };
+
+  const handleCalculateAll = () => {
+    setLoadingBtn(true);
+
+    const allResults: Record<string, Record<string, Record<string, number>>> = {};
+
+    allIccids.forEach(iccid => {
+      const normalizedIccid = normalize(iccid);
+      const matchedKey = Object.keys(allInputValues).find(
+        key => normalize(key) === normalizedIccid
+      );
+
+      if (!matchedKey) return;
+
+      const iccidRuntimeData = iccidRuntimes.reduce((acc, dayData) => {
+        if (!dayData.date) return acc;
+        const scale = dayData.scales.find((s) => s.iccid === iccid);
+        if (!scale) return acc;
+
+        const hourMap = scale.runtime.reduce((hourAcc, runtime) => {
+          hourAcc[runtime.hour] = runtime.totalDeltaSum;
+          return hourAcc;
+        }, {} as Record<string, number>);
+
+        acc[dayData.date] = hourMap;
+        return acc;
+      }, {} as Record<string, Record<string, number>>);
+
+      const iccidDates = Object.keys(iccidRuntimeData);
+
+      allResults[iccid] = {};
+
+      iccidDates.forEach(date => {
+        allResults[iccid][date] = {};
+        hours.forEach(hour => {
+          const runtimeVal = iccidRuntimeData[date]?.[hour];
+          const inputVal = allInputValues[matchedKey]?.[date]?.[hour] || '0';
+
+          const parsedInput = parseFloat(inputVal) || 0;
+          const multiplier = inputVal === '' ? 0 : parsedInput;
+          const value = typeof runtimeVal === 'number' ? runtimeVal * multiplier : 0;
+
+          allResults[iccid][date][hour] = value;
+        });
+      });
+    });
+
+    setAllCalculatedValues(allResults);
+    setLoadingBtn(false);
+  };
+
+  const handleCellMouseDown = (date: string, hour: string) => {
+    setCellSelection({
+      start: { date, hour },
+      end: { date, hour },
+      active: true
+    });
+  };
+
+  const handleCellMouseEnter = (date: string, hour: string) => {
+    if (cellSelection.active) {
+      setCellSelection(prev => ({
+        ...prev,
+        end: { date, hour }
+      }));
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (cellSelection.active) {
+      setCellSelection(prev => ({ ...prev, active: false }));
+      if (isSelectionActive()) {
+        saveToHistory(inputValues);
+      }
+    }
+  };
+
+  const isSelectionActive = () => {
+    return cellSelection.start && cellSelection.end &&
+      (cellSelection.start.date !== cellSelection.end.date ||
+        cellSelection.start.hour !== cellSelection.end.hour);
+  };
+
+  const getNormalizedSelection = () => {
+    if (!cellSelection.start || !cellSelection.end) return { start: { date: '', hour: '' }, end: { date: '', hour: '' } };
+
+    const dateStartIdx = dates.indexOf(cellSelection.start.date);
+    const dateEndIdx = dates.indexOf(cellSelection.end.date);
+    const hourStartIdx = hours.indexOf(cellSelection.start.hour);
+    const hourEndIdx = hours.indexOf(cellSelection.end.hour);
+
+    return {
+      start: {
+        date: dates[Math.min(dateStartIdx, dateEndIdx)],
+        hour: hours[Math.min(hourStartIdx, hourEndIdx)]
+      },
+      end: {
+        date: dates[Math.max(dateStartIdx, dateEndIdx)],
+        hour: hours[Math.max(hourStartIdx, hourEndIdx)]
+      }
+    };
+  };
+
+  const isCellSelected = (date: string, hour: string) => {
+    if (!isSelectionActive()) return false;
+
+    const { start, end } = getNormalizedSelection();
+    const dateIdx = dates.indexOf(date);
+    const hourIdx = hours.indexOf(hour);
+
+    return dateIdx >= dates.indexOf(start.date) &&
+      dateIdx <= dates.indexOf(end.date) &&
+      hourIdx >= hours.indexOf(start.hour) &&
+      hourIdx <= hours.indexOf(end.hour);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      setHistoryIndex(prev => prev - 1);
+      setInputValues(JSON.parse(JSON.stringify(history[historyIndex - 1])));
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(prev => prev + 1);
+      setInputValues(JSON.parse(JSON.stringify(history[historyIndex + 1])));
+    }
+  };
+
+  const handleClearAll = () => {
+    setInputValues({});
+    saveToHistory({});
+  };
+
+  const handleNext = () => {
+    setCurrentIccidIndex((prev) => (prev + 1) % allIccids.length);
+  };
+
+  const handlePrevious = () => {
+    setCurrentIccidIndex((prev) => (prev - 1 + allIccids.length) % allIccids.length);
+  };
+
+  const handleSaveToDB = async () => {
+    try {
+      const updatedAllInputValues = {
+        ...allInputValues,
+        [currentIccid]: inputValues,
+      };
+      setAllInputValues(updatedAllInputValues);
+
+      // Convert to Date objects for proper sorting
+      const sortedDates: string[] = dates
+        .map((date: string) => new Date(date))
+        .sort((a: Date, b: Date) => a.getTime() - b.getTime())
+        .map((date: Date) => date.toISOString().split('T')[0]);
+
+      const firstdate: string = sortedDates[0];
+      const lastdate: string = sortedDates[sortedDates.length - 1];
+
+
+
+      const payload = {
+        timestamp: new Date().toISOString(),
+        data: allIccids.map(iccid => ({
+          iccid,
+          inputValues: updatedAllInputValues[iccid] || {},
+        }))
+      };
+
+
+      const purpleFigurePayload = {
+        timestamp: new Date().toISOString(),
+        firstdate: firstdate,
+        lastdate: lastdate,
+        data: allIccids.map(iccid => ({
+          iccid,
+          purpleValues: allCalculatedValues[iccid] || {},
+        }))
+      };
+
+      setLoadingBtn2(true);
+
+      await createOrUpdateInputValueTable(id, payload);
+    
+      setMessage(`Input values and Purple figures saved.`);
+      setShow(true);
+      setSuccessful(true);
+      setLoadingBtn2(false);
+    } catch (error) {
+      setMessage(`Failed to save input values: ${error}`);
+      setShow(true);
+      setSuccessful(false);
+      setLoadingBtn2(false);
+      console.error(error);
+    }
+  };
+
+  //purple figures export
+
+  const exportToCSV = () => {
+    const dayTotals = dates.map((date, dateIndex) => {
+      const currentDaySum = hours
+        .filter(hour => hour >= '06')
+        .reduce((sum, hour) => sum + (calculatedValues[date]?.[hour] || 0), 0);
+
+      const nextDate = dates[dateIndex + 1];
+      const nextDaySum = nextDate
+        ? hours
+          .filter(hour => hour <= '05')
+          .reduce((sum, hour) => sum + (calculatedValues[nextDate]?.[hour] || 0), 0)
+        : 0;
+
+      return currentDaySum + nextDaySum;
+    });
+
+    const progressiveTotal = dayTotals.reduce((sum, total) => sum + total, 0);
+
+    const header = ["ICCID", "Date", ...hours, "Day Total"];
+    const rows = dates.map((date, index) => {
+      const row = [currentIccid, date];
+      hours.forEach((hour) => {
+        const value = calculatedValues[date]?.[hour]?.toFixed(4) || "0.0000";
+        row.push(value);
+      });
+      row.push(dayTotals[index].toFixed(4));
+      return row;
+    });
+
+    const totalRow = [
+      currentIccid,
+      "Progressive Total",
+      ...hours.map(() => ""),
+      progressiveTotal.toFixed(4)
+    ];
+
+    const csvContent = [
+      header.join(","),
+      ...rows.map(row => row.join(",")),
+      totalRow.join(",")
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${currentIccid} Purple Figures.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAllToCSV = () => {
+    const iccidsWithData = allIccids.filter(iccid =>
+      allCalculatedValues[iccid] && Object.keys(allCalculatedValues[iccid]).length > 0
+    );
+
+    if (iccidsWithData.length === 0) {
+      console.log("No data to export");
+      return;
+    }
+
+    const progressiveTotals: Record<string, number> = {};
+    iccidsWithData.forEach(iccid => {
+      const iccidDates = Object.keys(allCalculatedValues[iccid] || {}).sort();
+      progressiveTotals[iccid] = iccidDates.reduce((total, date, dateIndex) => {
+        const currentDaySum = hours
+          .filter(hour => hour >= '06')
+          .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[date]?.[hour] || 0), 0);
+
+        const nextDate = iccidDates[dateIndex + 1];
+        const nextDaySum = nextDate
+          ? hours
+            .filter(hour => hour <= '05')
+            .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[nextDate]?.[hour] || 0), 0)
+          : 0;
+
+        return total + currentDaySum + nextDaySum;
+      }, 0);
+    });
+
+    const header = ["ICCID", "Date", ...hours, "Day Total (06-05)"];
+    const rows: string[][] = [];
+
+    iccidsWithData.forEach((iccid, iccidIndex) => {
+      if (iccidIndex > 0) {
+        rows.push(Array(header.length).fill(""));
+      }
+
+      const iccidDates = Object.keys(allCalculatedValues[iccid] || {}).sort();
+
+      iccidDates.forEach((date, dateIndex) => {
+        const currentDaySum = hours
+          .filter(hour => hour >= '06')
+          .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[date]?.[hour] || 0), 0);
+
+        const nextDate = iccidDates[dateIndex + 1];
+        const nextDaySum = nextDate
+          ? hours
+            .filter(hour => hour <= '05')
+            .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[nextDate]?.[hour] || 0), 0)
+          : 0;
+
+        const dayTotal = currentDaySum + nextDaySum;
+
+        const row = [
+          iccid,
+          date,
+          ...hours.map(hour => allCalculatedValues[iccid]?.[date]?.[hour]?.toFixed(4) || '0.0000'),
+          dayTotal.toFixed(4)
+        ];
+        rows.push(row);
+      });
+
+      rows.push([
+        iccid,
+        "Progressive Total",
+        ...hours.map(() => ""),
+        progressiveTotals[iccid]?.toFixed(4) || '0.0000'
+      ]);
+    });
+
+    rows.push(Array(header.length).fill(""));
+    const grandTotal = Object.values(progressiveTotals).reduce((sum, total) => sum + total, 0);
+    rows.push([
+      "ALL ICCIDS",
+      "GRAND TOTAL",
+      ...hours.map(() => ""),
+      grandTotal.toFixed(4)
+    ]);
+
+    let csvContent = [
+      `SEP=,`,
+      header.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    csvContent = csvContent.replace(
+      new RegExp(`"${Array(header.length).fill('""').join(',')}"`, 'g'),
+      Array(header.length).fill('" "').join(',') + ',@style=background:#f0f0f0'
+    );
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${dashboardname}_Purple_Figures_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  //input figures export
+
+  const exportInputTableToCSV = (): void => {
+    // Get the currently visible ICCID(s)
+    const visibleIccids: string[] = viewMode === 'single' ? [currentIccid] : allIccids;
+
+    // Get the currently visible dates (filtered by date range if specified)
+    let visibleDates: string[] = dates;
+    if (exportInputStartDate && exportInputEndDate) {
+      visibleDates = dates.filter(date => {
+        const dateObj = new Date(date);
+        const startObj = new Date(exportInputStartDate);
+        const endObj = new Date(exportInputEndDate);
+        return dateObj >= startObj && dateObj <= endObj;
+      });
+    }
+
+    // Prepare CSV content
+    const header = ["Site Name", "ICCID", "Date", "Hour", "Input Value"];
+    const rows: string[][] = [];
+
+    // Add data rows
+    visibleIccids.forEach(iccid => {
+      const inputData = viewMode === 'single' ? inputValues : allInputValues[iccid] || {};
+
+      visibleDates.forEach(date => {
+        hours.forEach(hour => {
+          const value = inputData[date]?.[hour] || '';
+          rows.push([
+            dashboardname,
+            iccid,
+            date,
+            hour,
+            value
+          ]);
+        });
+      });
+    });
+
+    // Create CSV content
+    const csvContent = [
+      header.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    // Create filename with site name and date range
+    let fileName = `${dashboardname}_Input_Table`;
+    if (exportInputStartDate && exportInputEndDate) {
+      fileName += `_${exportInputStartDate}_to_${exportInputEndDate}`;
+    } else if (visibleDates.length > 0) {
+      fileName += `_${visibleDates[0]}_to_${visibleDates[visibleDates.length - 1]}`;
+    }
+    fileName += `.csv`;
+
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPerDay = () => {
+    if (!exportDate) {
+      setMessage(`Please select a date`);
+      setShow(true);
+      setSuccessful(false);
+      return;
+    }
+
+    const dayData = iccidRuntimes.find(day => day.date !== null && day.date === exportDate);
+    if (!dayData) {
+      setMessage(`No data found for the selected date`);
+      setShow(true);
+      setSuccessful(false);
+      return;
+    }
+
+    const header = ["ICCID", "Hour", "Runtime", "Input Value", "Calculated Value"];
+    const rows: string[][] = [];
+
+    allIccids.forEach((iccid, index) => {
+      const scale = dayData.scales.find(s => s.iccid === iccid);
+      if (!scale) return;
+
+      if (index > 0) {
+        rows.push(["", "", "", "", ""]);
+      }
+
+      hours.forEach(hour => {
+        const runtime = scale.runtime.find(r => r.hour === hour)?.totalDeltaSum || 0;
+        const inputVal = allInputValues[iccid]?.[exportDate]?.[hour] || '';
+        const calculatedVal = allCalculatedValues[iccid]?.[exportDate]?.[hour] || 0;
+
+        rows.push([
+          iccid,
+          hour,
+          runtime.toFixed(4),
+          inputVal,
+          calculatedVal.toFixed(4)
+        ]);
+      });
+    });
+
+    let csvContent = [`SEP=,`, header.join(","), ...rows.map(row => row.join(","))].join("\n");
+    csvContent = csvContent.replace(
+      /"","","","",""/g,
+      '" "," "," "," "," ",@style=background:#f0f0f0'
+    );
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${dashboardname}_Daily_Export_${exportDate}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPerShift = () => {
+    if (!shiftStart || !shiftEnd) {
+      setMessage(`Please select both start and end times for the shift`);
+      setShow(true);
+      setSuccessful(false);
+      return;
+    }
+
+    const startDate = new Date(shiftStart);
+    const endDate = new Date(shiftEnd);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      setMessage(`Invalid date format for shift times`);
+      setShow(true);
+      setSuccessful(false);
+      return;
+    }
+
+    if (startDate >= endDate) {
+      setMessage(`Shift end time must be after start time`);
+      setShow(true);
+      setSuccessful(false);
+      return;
+    }
+
+    const header = ["ICCID", "Date", "Hour", "Runtime", "Input Value", "Calculated Value"];
+    const rows: string[][] = [];
+
+    allIccids.forEach((iccid, index) => {
+      iccidRuntimes.filter(hasValidDate).forEach(dayData => {
+        const scale = dayData.scales.find(s => s.iccid === iccid);
+        if (!scale) return;
+
+        if (index > 0) {
+          rows.push(["", "", "", "", ""]);
+        }
+
+        const dayDate = new Date(dayData.date);
+        if (isNaN(dayDate.getTime())) {
+          console.error('Invalid date in dayData:', dayData.date);
+          return;
+        }
+
+        dayDate.setHours(0, 0, 0, 0);
+
+        scale.runtime.forEach(runtime => {
+          const hourValue = runtime.hour.includes(':')
+            ? parseInt(runtime.hour.split(':')[0], 10)
+            : parseInt(runtime.hour, 10);
+
+          if (isNaN(hourValue) || hourValue < 0 || hourValue > 23) {
+            console.error('Invalid hour value:', runtime.hour);
+            return;
+          }
+
+          const entryDate = new Date(dayDate);
+          entryDate.setHours(hourValue, 0, 0, 0);
+
+          if (entryDate >= startDate && entryDate <= endDate) {
+            const inputVal = allInputValues[iccid]?.[dayData.date]?.[runtime.hour] || '';
+            const calculatedVal = allCalculatedValues[iccid]?.[dayData.date]?.[runtime.hour] || 0;
+
+            rows.push([
+              iccid,
+              dayData.date,
+              hourValue.toString().padStart(2, '0'),
+              runtime.totalDeltaSum.toFixed(4),
+              inputVal,
+              calculatedVal.toFixed(4)
+            ]);
+          }
+        });
+      });
+    });
+
+    if (rows.length === 0) {
+      setMessage(`No data found for the selected time period`);
+      setShow(true);
+      setSuccessful(false);
+      return;
+    }
+
+    let csvContent = [`SEP=,`, header.join(","), ...rows.map(row => row.join(","))].join("\n");
+    csvContent = csvContent.replace(
+      /"","","","",""/g,
+      '" "," "," "," "," ",@style=background:#f0f0f0'
+    );
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${dashboardname}_Shift_Export_${startDate.toLocaleString().replace(/[/:, ]/g, '_')}_to_${endDate.toLocaleString().replace(/[/:, ]/g, '_')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const AllIccidsPurpleFigures = () => {
+    const iccidsWithData = allIccids.filter(iccid =>
+      allCalculatedValues[iccid] && Object.keys(allCalculatedValues[iccid]).length > 0
+    );
+
+    const progressiveTotals: Record<string, number> = {};
+    iccidsWithData.forEach(iccid => {
+      const iccidDates = Object.keys(allCalculatedValues[iccid] || {}).sort();
+      progressiveTotals[iccid] = iccidDates.reduce((total, date, dateIndex) => {
+        const currentDaySum = hours
+          .filter(hour => hour >= '06')
+          .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[date]?.[hour] || 0), 0);
+
+        const nextDate = iccidDates[dateIndex + 1];
+        const nextDaySum = nextDate
+          ? hours
+            .filter(hour => hour <= '05')
+            .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[nextDate]?.[hour] || 0), 0)
+          : 0;
+
+        return total + currentDaySum + nextDaySum;
+      }, 0);
+    });
+
+    if (iccidsWithData.length === 0) {
+      return (
+        <div className="border rounded-lg overflow-hidden mt-8 p-4 text-center">
+          <div className="bg-purple-500 font-bold px-4 py-2 text-white">
+            ALL ICCIDS PURPLE FIGURES
+          </div>
+          <p className="py-4">No calculated data available. Please calculate for ICCIDs first.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="border rounded-lg overflow-hidden mt-8">
+        <div className="bg-purple-500 font-bold px-4 py-2 text-white text-center">
+          ALL ICCIDS PURPLE FIGURES
+        </div>
+        <div className="overflow-x-auto max-h-[600px]">
+          <Table className="min-w-full">
+            <TableHeader className="sticky top-0 bg-gray-100">
+              <TableRow>
+                <TableHead className="w-[120px]">ICCID</TableHead>
+                <TableHead className="w-[120px]">Date</TableHead>
+                {hours.map((hour) => (
+                  <TableHead key={hour} className="text-center">{hour}</TableHead>
+                ))}
+                <TableHead className="text-center font-bold">Day Total (06-05)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {iccidsWithData.flatMap(iccid => {
+                const iccidDates = Object.keys(allCalculatedValues[iccid] || {}).sort();
+                return [
+                  ...iccidDates.map((date, dateIndex) => {
+                    const currentDaySum = hours
+                      .filter(hour => hour >= '06')
+                      .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[date]?.[hour] || 0), 0);
+
+                    const nextDate = iccidDates[dateIndex + 1];
+                    const nextDaySum = nextDate
+                      ? hours
+                        .filter(hour => hour <= '05')
+                        .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[nextDate]?.[hour] || 0), 0)
+                      : 0;
+
+                    const dayTotal = currentDaySum + nextDaySum;
+
+                    return (
+                      <TableRow key={`${iccid}-${date}`}>
+                        <TableCell className="font-medium">{iccid}</TableCell>
+                        <TableCell className="font-medium">{date}</TableCell>
+                        {hours.map((hour) => (
+                          <TableCell key={`${iccid}-${date}-${hour}`} className="text-center text-purple-700 font-bold">
+                            {allCalculatedValues[iccid]?.[date]?.[hour]?.toFixed(4) || '0.0000'}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-center font-bold bg-purple-400">
+                          {dayTotal.toFixed(4)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }),
+                  <TableRow key={`${iccid}-total`} className="bg-purple-50">
+                    <TableCell colSpan={hours.length + 2} className="font-bold text-right pr-10 bg-slate-500">
+                      Progressive Total for {iccid}:
+                    </TableCell>
+                    <TableCell className="text-center font-bold bg-purple-400">
+                      {progressiveTotals[iccid]?.toFixed(4) || '0.0000'}
+                    </TableCell>
+                  </TableRow>
+                ];
+              })}
+              <TableRow className="bg-purple-100">
+                <TableCell colSpan={hours.length + 2} className="font-bold text-right pr-10 bg-slate-500">
+                  GRAND TOTAL:
+                </TableCell>
+                <TableCell className="text-center font-bold bg-purple-400">
+                  {Object.values(progressiveTotals).reduce((sum, total) => sum + total, 0).toFixed(4)}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  };
 
   // Auto-fill logic
   useEffect(() => {
@@ -255,777 +1060,6 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
     }
   }, [autoFillMode]);
 
-  // Generate date-hour values mapping
-  const dateToHourValues = iccidRuntimes.reduce((acc, dayData) => {
-    if (!dayData.date) return acc;
-    const scale = dayData.scales.find((s) => s.iccid === currentIccid);
-    if (!scale) return acc;
-
-    const hourMap = scale.runtime.reduce((hourAcc, runtime) => {
-      hourAcc[runtime.hour] = runtime.totalDeltaSum;
-      return hourAcc;
-    }, {} as Record<string, number>);
-
-    acc[dayData.date] = hourMap;
-    return acc;
-  }, {} as Record<string, Record<string, number>>);
-
-  //extract date in their correct order
-  const dates = Object.keys(dateToHourValues);
-
-  const handleExportDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setExportDate(e.target.value);
-  };
-
-  const handleShiftStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setShiftStart(e.target.value);
-  };
-
-  const handleShiftEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-
-    console.log(e.target.value)
-    setShiftEnd(e.target.value);
-  };
-
-  // Save state to history
-  const saveToHistory = (currentState: Record<string, Record<string, string>>) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(JSON.parse(JSON.stringify(currentState)));
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  };
-
-  // Handle input changes with history tracking
-  const handleInputChange = (date: string, hour: string, value: string) => {
-    const newValues = {
-      ...inputValues,
-      [date]: {
-        ...inputValues[date],
-        [hour]: value,
-      },
-    };
-
-    setInputValues(newValues);
-    setLastAction('manual');
-
-    // For bulk edits, we'll save to history when the selection is complete
-    if (!cellSelection.active) {
-      saveToHistory(newValues);
-    }
-  };
-
-  // Apply preset to selected cells or single cell
-  const applyPreset = (value: number) => {
-    let newValues = JSON.parse(JSON.stringify(inputValues));
-    const presetValue = value.toString();
-
-    if (isSelectionActive()) {
-      // Apply to selection
-      const { start, end } = getNormalizedSelection();
-      for (let d = dates.indexOf(start.date); d <= dates.indexOf(end.date); d++) {
-        const date = dates[d];
-        for (let h = hours.indexOf(start.hour); h <= hours.indexOf(end.hour); h++) {
-          const hour = hours[h];
-          if (!newValues[date]) newValues[date] = {};
-          newValues[date][hour] = presetValue;
-        }
-      }
-    } else {
-      // Apply to all empty cells
-      dates.forEach(date => {
-        hours.forEach(hour => {
-          if (!newValues[date]?.[hour]) {
-            if (!newValues[date]) newValues[date] = {};
-            newValues[date][hour] = presetValue;
-          }
-        });
-      });
-    }
-
-    setInputValues(newValues);
-    saveToHistory(newValues);
-    setLastAction('preset');
-  };
-
-
-  // Calculate purple figures
-  const handleCalculate = () => {
-    setLoadingBtn(true);
-    const result: Record<string, Record<string, number>> = {};
-
-    for (const date of dates) {
-      result[date] = {};
-      for (const hour of hours) {
-        const runtimeVal = dateToHourValues[date]?.[hour];
-        const inputVal = inputValues[date]?.[hour];
-
-        const parsedInput = parseFloat(inputVal || '0') || 0;
-        const multiplier = inputVal === '' ? 0 : parsedInput;
-        const value = typeof runtimeVal === 'number' ? runtimeVal * multiplier : 0;
-
-        result[date][hour] = value;
-      }
-    }
-
-    setCalculatedValues(result);
-    // Also update the allCalculatedValues for this ICCID
-    setAllCalculatedValues(prev => ({
-      ...prev,
-      [currentIccid]: result
-    }));
-    setLoadingBtn(false);
-  };
-
-  const handleCalculateAll = () => {
-    setLoadingBtn(true);
-
-    const allResults: Record<string, Record<string, Record<string, number>>> = {};
-
-    allIccids.forEach(iccid => {
-      // Skip if no input values for this ICCID
-      if (!allInputValues[iccid]) return;
-
-      // Get the runtime data for this ICCID
-      const iccidRuntimeData = iccidRuntimes.reduce((acc, dayData) => {
-        if (!dayData.date) return acc;
-        const scale = dayData.scales.find((s) => s.iccid === iccid);
-        if (!scale) return acc;
-
-        const hourMap = scale.runtime.reduce((hourAcc, runtime) => {
-          hourAcc[runtime.hour] = runtime.totalDeltaSum;
-          return hourAcc;
-        }, {} as Record<string, number>);
-
-        acc[dayData.date] = hourMap;
-        return acc;
-      }, {} as Record<string, Record<string, number>>);
-
-      const iccidDates = Object.keys(iccidRuntimeData);
-
-      allResults[iccid] = {};
-
-      iccidDates.forEach(date => {
-        allResults[iccid][date] = {};
-        hours.forEach(hour => {
-          const runtimeVal = iccidRuntimeData[date]?.[hour];
-          const inputVal = allInputValues[iccid]?.[date]?.[hour] || '0';
-
-          const parsedInput = parseFloat(inputVal) || 0;
-          const multiplier = inputVal === '' ? 0 : parsedInput;
-          const value = typeof runtimeVal === 'number' ? runtimeVal * multiplier : 0;
-
-          allResults[iccid][date][hour] = value;
-        });
-      });
-    });
-
-    setAllCalculatedValues(allResults);
-    setLoadingBtn(false);
-  };
-
-  // Selection handling
-  const handleCellMouseDown = (date: string, hour: string) => {
-    setCellSelection({
-      start: { date, hour },
-      end: { date, hour },
-      active: true
-    });
-  };
-
-  const handleCellMouseEnter = (date: string, hour: string) => {
-    if (cellSelection.active) {
-      setCellSelection(prev => ({
-        ...prev,
-        end: { date, hour }
-      }));
-    }
-  };
-
-  const handleMouseUp = () => {
-    if (cellSelection.active) {
-      setCellSelection(prev => ({ ...prev, active: false }));
-      if (isSelectionActive()) {
-        saveToHistory(inputValues);
-      }
-    }
-  };
-
-  // Helpers for selection
-  const isSelectionActive = () => {
-    return cellSelection.start && cellSelection.end &&
-      (cellSelection.start.date !== cellSelection.end.date ||
-        cellSelection.start.hour !== cellSelection.end.hour);
-  };
-
-  const getNormalizedSelection = () => {
-    if (!cellSelection.start || !cellSelection.end) return { start: { date: '', hour: '' }, end: { date: '', hour: '' } };
-
-    const dateStartIdx = dates.indexOf(cellSelection.start.date);
-    const dateEndIdx = dates.indexOf(cellSelection.end.date);
-    const hourStartIdx = hours.indexOf(cellSelection.start.hour);
-    const hourEndIdx = hours.indexOf(cellSelection.end.hour);
-
-    return {
-      start: {
-        date: dates[Math.min(dateStartIdx, dateEndIdx)],
-        hour: hours[Math.min(hourStartIdx, hourEndIdx)]
-      },
-      end: {
-        date: dates[Math.max(dateStartIdx, dateEndIdx)],
-        hour: hours[Math.max(hourStartIdx, hourEndIdx)]
-      }
-    };
-  };
-
-  const isCellSelected = (date: string, hour: string) => {
-    if (!isSelectionActive()) return false;
-
-    const { start, end } = getNormalizedSelection();
-    const dateIdx = dates.indexOf(date);
-    const hourIdx = hours.indexOf(hour);
-
-    return dateIdx >= dates.indexOf(start.date) &&
-      dateIdx <= dates.indexOf(end.date) &&
-      hourIdx >= hours.indexOf(start.hour) &&
-      hourIdx <= hours.indexOf(end.hour);
-  };
-
-  // Undo/redo functionality
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      setHistoryIndex(prev => prev - 1);
-      setInputValues(JSON.parse(JSON.stringify(history[historyIndex - 1])));
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(prev => prev + 1);
-      setInputValues(JSON.parse(JSON.stringify(history[historyIndex + 1])));
-    }
-  };
-
-  // Add this clear function
-  const handleClearAll = () => {
-    setInputValues({});
-    saveToHistory({});
-  };
-
-  // Navigation
-  const handleNext = () => {
-    setCurrentIccidIndex((prev) => (prev + 1) % allIccids.length);
-  };
-
-  const handlePrevious = () => {
-    setCurrentIccidIndex((prev) => (prev - 1 + allIccids.length) % allIccids.length);
-  };
-
-
-  // Add a "Store Data" button handler
-  const handleStoreData = () => {
-    setAllInputValues(prev => ({
-      ...prev,
-      [currentIccid]: inputValues
-    }));
-    console.log(`Stored data for ICCID: ${currentIccid}`);
-  };
-
-  // Modify handleSaveToDB to save all ICCID data
-  const handleSaveToDB = async () => {
-
-    try {
-
-      const payload = {
-        timestamp: new Date().toISOString(),
-        data: allIccids.map(iccid => ({
-          iccid,
-          inputValues: allInputValues[iccid] || {},
-          // calculatedValues: allCalculatedValues[iccid] || {}
-        }))
-
-      };
-
-      setLoadingBtn2(true)
-      await createOrUpdateInputValueTable(id, payload)
-
-      setMessage(`Input values saved.`);
-      setShow(true);
-      setSuccessful(true);
-      setLoadingBtn2(false)
-    } catch (error) {
-      setMessage(`Failed to save input values: ${error}`);
-      setShow(true);
-      setSuccessful(false);
-      setLoadingBtn2(false)
-      console.log(error)
-    }
-
-
-  };
-
-  // Export to CSV
-  const exportToCSV = () => {
-    // Calculate day totals and progressive total
-    const dayTotals = dates.map(date =>
-      hours.reduce((sum, hour) => sum + (calculatedValues[date]?.[hour] || 0), 0)
-    );
-    const progressiveTotal = dayTotals.reduce((sum, total) => sum + total, 0);
-
-    // Prepare header
-    const header = ["ICCID", "Date", ...hours, "Day Total"];
-
-    // Prepare data rows with day totals
-    const rows = dates.map((date, index) => {
-      const row = [currentIccid, date];
-      hours.forEach((hour) => {
-        const value = calculatedValues[date]?.[hour]?.toFixed(4) || "0.0000";
-        row.push(value);
-      });
-      row.push(dayTotals[index].toFixed(4));
-      return row;
-    });
-
-    // Add progressive total row
-    const totalRow = [
-      currentIccid,
-      "Progressive Total",
-      ...hours.map(() => ""), // Empty cells for hours
-      progressiveTotal.toFixed(4)
-    ];
-
-    const csvContent = [
-      header.join(","),
-      ...rows.map(row => row.join(",")),
-      totalRow.join(",")
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${currentIccid} Purple Figures.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-
-  const exportAllToCSV = () => {
-    // Get all ICCIDs with calculated data
-    const iccidsWithData = allIccids.filter(iccid =>
-      allCalculatedValues[iccid] && Object.keys(allCalculatedValues[iccid]).length > 0
-    );
-
-    if (iccidsWithData.length === 0) {
-      console.log("No data to export");
-      return;
-    }
-
-    // Calculate progressive totals for each ICCID
-    const progressiveTotals: Record<string, number> = {};
-    iccidsWithData.forEach(iccid => {
-      const iccidDates = Object.keys(allCalculatedValues[iccid] || {}).sort();
-      progressiveTotals[iccid] = iccidDates.reduce((total, date, dateIndex) => {
-        const currentDaySum = hours
-          .filter(hour => hour >= '06')
-          .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[date]?.[hour] || 0), 0);
-
-        const nextDate = iccidDates[dateIndex + 1];
-        const nextDaySum = nextDate
-          ? hours
-            .filter(hour => hour <= '05')
-            .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[nextDate]?.[hour] || 0), 0)
-          : 0;
-
-        return total + currentDaySum + nextDaySum;
-      }, 0);
-    });
-
-    // Prepare header
-    const header = ["ICCID", "Date", ...hours, "Day Total (06-05)"];
-
-    // Prepare data rows
-    const rows: string[][] = [];
-
-    iccidsWithData.forEach((iccid, iccidIndex) => {
-      // Add separator row before each new ICCID (except the first one)
-      if (iccidIndex > 0) {
-        rows.push(Array(header.length).fill("")); // Empty separator row
-      }
-
-      const iccidDates = Object.keys(allCalculatedValues[iccid] || {}).sort();
-
-      // Add data rows for each date
-      iccidDates.forEach((date, dateIndex) => {
-        const currentDaySum = hours
-          .filter(hour => hour >= '06')
-          .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[date]?.[hour] || 0), 0);
-
-        const nextDate = iccidDates[dateIndex + 1];
-        const nextDaySum = nextDate
-          ? hours
-            .filter(hour => hour <= '05')
-            .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[nextDate]?.[hour] || 0), 0)
-          : 0;
-
-        const dayTotal = currentDaySum + nextDaySum;
-
-        const row = [
-          iccid,
-          date,
-          ...hours.map(hour => allCalculatedValues[iccid]?.[date]?.[hour]?.toFixed(4) || '0.0000'),
-          dayTotal.toFixed(4)
-        ];
-        rows.push(row);
-      });
-
-      // Add progressive total row for this ICCID
-      rows.push([
-        iccid,
-        "Progressive Total",
-        ...hours.map(() => ""),
-        progressiveTotals[iccid]?.toFixed(4) || '0.0000'
-      ]);
-    });
-
-    // Add separator before grand total
-    rows.push(Array(header.length).fill(""));
-
-    // Add grand total row
-    const grandTotal = Object.values(progressiveTotals).reduce((sum, total) => sum + total, 0);
-    rows.push([
-      "ALL ICCIDS",
-      "GRAND TOTAL",
-      ...hours.map(() => ""),
-      grandTotal.toFixed(4)
-    ]);
-
-    // Convert to CSV content with Excel styling
-    let csvContent = [
-      `SEP=,`, // Ensure Excel uses commas
-      header.join(","),
-      ...rows.map(row => row.join(","))
-    ].join("\n");
-
-    // Add Excel styling for separator rows (optional)
-    csvContent = csvContent.replace(
-      new RegExp(`"${Array(header.length).fill('""').join(',')}"`, 'g'),
-      Array(header.length).fill('" "').join(',') + ',@style=background:#f0f0f0'
-    );
-
-    // Create and trigger download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${dashboardname}_Purple_Figures_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportPerDay = () => {
-    if (!exportDate) {
-      setMessage(`Please select a date`);
-      setShow(true);
-      setSuccessful(false);
-      
-      return;
-    }
-
-    const dayData = iccidRuntimes.find(day => day.date !== null && day.date === exportDate);
-    if (!dayData) {
-      setMessage(`No data found for the selected date`);
-      setShow(true);
-      setSuccessful(false);
-      
-      return;
-    }
-
-    // Prepare CSV content
-    const header = ["ICCID", "Hour", "Runtime", "Input Value", "Calculated Value"];
-    const rows: string[][] = [];
-
-    allIccids.forEach((iccid, index) => {
-      const scale = dayData.scales.find(s => s.iccid === iccid);
-      if (!scale) return;
-
-      // Add a separator row before each new ICCID (except the first one)
-      if (index > 0) {
-        rows.push(["", "", "", "", ""]); // Empty row for separation
-      }
-
-      hours.forEach(hour => {
-        const runtime = scale.runtime.find(r => r.hour === hour)?.totalDeltaSum || 0;
-        const inputVal = allInputValues[iccid]?.[exportDate]?.[hour] || '';
-        const calculatedVal = allCalculatedValues[iccid]?.[exportDate]?.[hour] || 0;
-
-        rows.push([
-          iccid,
-          hour,
-          runtime.toFixed(4),
-          inputVal,
-          calculatedVal.toFixed(4)
-        ]);
-      });
-    });
-
-    // Create CSV content
-    let csvContent = [header.join(","), ...rows.map(row => row.join(","))].join("\n");
-
-    // (Optional) Add Excel-specific styling for separator rows
-    // This only works when opened in Excel
-    csvContent = `SEP=,\n${csvContent}`; // Ensures Excel interprets commas correctly
-    csvContent = csvContent.replace(
-      /"","","","",""/g,
-      '" "," "," "," "," ",@style=background:#f0f0f0' // Gray background for empty rows
-    );
-
-    // Trigger download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${dashboardname}_Daily_Export_${exportDate}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportPerShift = () => {
-    if (!shiftStart || !shiftEnd) {
-      setMessage(`Please select both start and end times for the shift`);
-      setShow(true);
-      setSuccessful(false);
-      
-      return;
-    }
-
-    // Parse dates in local timezone
-    const startDate = new Date(shiftStart);
-    const endDate = new Date(shiftEnd);
-
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      setMessage(`Invalid date format for shift times`);
-      setShow(true);
-      setSuccessful(false);
-      
-      return;
-    }
-
-    if (startDate >= endDate) {
-    
-      setMessage(`Shift end time must be after start time`);
-      setShow(true);
-      setSuccessful(false);
-      return;
-    }
-
-    // Prepare CSV content
-    const header = ["ICCID", "Date", "Hour", "Runtime", "Input Value", "Calculated Value"];
-    const rows: string[][] = [];
-    let totalEntries = 0;
-
-    allIccids.forEach((iccid, index) => {
-      iccidRuntimes.filter(hasValidDate).forEach(dayData => {
-        const scale = dayData.scales.find(s => s.iccid === iccid);
-        if (!scale) return;
-
-        // Add a separator row before each new ICCID (except the first one)
-        if (index > 0) {
-          rows.push(["", "", "", "", ""]); // Empty row for separation
-        }
-
-        // Parse day date in local time
-        const dayDate = new Date(dayData.date);
-        if (isNaN(dayDate.getTime())) {
-          console.error('Invalid date in dayData:', dayData.date);
-          return;
-        }
-
-        // Reset time components to ensure pure date
-        dayDate.setHours(0, 0, 0, 0);
-
-        scale.runtime.forEach(runtime => {
-          // Extract hour only (handle both "HH" and "HH:MM" formats)
-          const hourValue = runtime.hour.includes(':')
-            ? parseInt(runtime.hour.split(':')[0], 10)
-            : parseInt(runtime.hour, 10);
-
-          if (isNaN(hourValue) || hourValue < 0 || hourValue > 23) {
-            console.error('Invalid hour value:', runtime.hour);
-            return;
-          }
-
-          // Create date object in local time
-          const entryDate = new Date(dayDate);
-          entryDate.setHours(hourValue, 0, 0, 0);
-
-          // Compare dates in local time
-          if (entryDate >= startDate && entryDate <= endDate) {
-            const inputVal = allInputValues[iccid]?.[dayData.date]?.[runtime.hour] || '';
-            const calculatedVal = allCalculatedValues[iccid]?.[dayData.date]?.[runtime.hour] || 0;
-
-            rows.push([
-              iccid,
-              dayData.date, // Original date string
-              hourValue.toString().padStart(2, '0'), // Formatted hour
-              runtime.totalDeltaSum.toFixed(4),
-              inputVal,
-              calculatedVal.toFixed(4)
-            ]);
-            totalEntries++;
-          }
-        });
-      });
-    });
-
-    if (rows.length === 0) {
-      setMessage(`No data found for the selected time period`);
-      setShow(true);
-      setSuccessful(false);
-      
-      return;
-    }
-
-    let csvContent = [header.join(","), ...rows.map(row => row.join(","))].join("\n");
-
-    // (Optional) Add Excel-specific styling for separator rows
-    // This only works when opened in Excel
-    csvContent = `SEP=,\n${csvContent}`; // Ensures Excel interprets commas correctly
-    csvContent = csvContent.replace(
-      /"","","","",""/g,
-      '" "," "," "," "," ",@style=background:#f0f0f0' // Gray background for empty rows
-    );
-
-
-    // Create and trigger download
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${dashboardname}_Shift_Export_${startDate.toLocaleString().replace(/[/:, ]/g, '_')
-      }_to_${endDate.toLocaleString().replace(/[/:, ]/g, '_')
-      }.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  //purple figures all iccid components
-  const AllIccidsPurpleFigures = () => {
-    // Get all ICCIDs that have calculated data
-    const iccidsWithData = allIccids.filter(iccid =>
-      allCalculatedValues[iccid] && Object.keys(allCalculatedValues[iccid]).length > 0
-    );
-
-    // Calculate progressive totals for each ICCID
-    const progressiveTotals: Record<string, number> = {};
-    iccidsWithData.forEach(iccid => {
-      const iccidDates = Object.keys(allCalculatedValues[iccid] || {}).sort();
-      progressiveTotals[iccid] = iccidDates.reduce((total, date, dateIndex) => {
-        // Calculate day total (06:00-05:00 next day)
-        const currentDaySum = hours
-          .filter(hour => hour >= '06')
-          .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[date]?.[hour] || 0), 0);
-
-        const nextDate = iccidDates[dateIndex + 1];
-        const nextDaySum = nextDate
-          ? hours
-            .filter(hour => hour <= '05')
-            .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[nextDate]?.[hour] || 0), 0)
-          : 0;
-
-        return total + currentDaySum + nextDaySum;
-      }, 0);
-    });
-
-    if (iccidsWithData.length === 0) {
-      return (
-        <div className="border rounded-lg overflow-hidden mt-8 p-4 text-center">
-          <div className="bg-purple-500 font-bold px-4 py-2 text-white">
-            ALL ICCIDS PURPLE FIGURES
-          </div>
-          <p className="py-4">No calculated data available. Please calculate for ICCIDs first.</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="border rounded-lg overflow-hidden mt-8">
-        <div className="bg-purple-500 font-bold px-4 py-2 text-white text-center">
-          ALL ICCIDS PURPLE FIGURES
-        </div>
-        <div className="overflow-x-auto max-h-[600px]">
-          <Table className="min-w-full">
-            <TableHeader className="sticky top-0 bg-gray-100">
-              <TableRow>
-                <TableHead className="w-[120px]">ICCID</TableHead>
-                <TableHead className="w-[120px]">Date</TableHead>
-                {hours.map((hour) => (
-                  <TableHead key={hour} className="text-center">{hour}</TableHead>
-                ))}
-                <TableHead className="text-center font-bold">Day Total (06-05)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {iccidsWithData.flatMap(iccid => {
-                const iccidDates = Object.keys(allCalculatedValues[iccid] || {}).sort();
-                return [
-                  ...iccidDates.map((date, dateIndex) => {
-                    // Calculate day total (06:00-05:00 next day)
-                    const currentDaySum = hours
-                      .filter(hour => hour >= '06')
-                      .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[date]?.[hour] || 0), 0);
-
-                    const nextDate = iccidDates[dateIndex + 1];
-                    const nextDaySum = nextDate
-                      ? hours
-                        .filter(hour => hour <= '05')
-                        .reduce((sum, hour) => sum + (allCalculatedValues[iccid]?.[nextDate]?.[hour] || 0), 0)
-                      : 0;
-
-                    const dayTotal = currentDaySum + nextDaySum;
-
-                    return (
-                      <TableRow key={`${iccid}-${date}`}>
-                        <TableCell className="font-medium">{iccid}</TableCell>
-                        <TableCell className="font-medium">{date}</TableCell>
-                        {hours.map((hour) => (
-                          <TableCell key={`${iccid}-${date}-${hour}`} className="text-center text-purple-700 font-bold">
-                            {allCalculatedValues[iccid]?.[date]?.[hour]?.toFixed(4) || '0.0000'}
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-center font-bold bg-purple-400">
-                          {dayTotal.toFixed(4)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  }),
-                  // Progressive total row for this ICCID
-                  <TableRow key={`${iccid}-total`} className="bg-purple-50">
-                    <TableCell colSpan={hours.length + 2} className="font-bold text-right pr-10  bg-slate-500">
-                      Progressive Total for {iccid}:
-                    </TableCell>
-                    <TableCell className="text-center font-bold bg-purple-400">
-                      {progressiveTotals[iccid]?.toFixed(4) || '0.0000'}
-                    </TableCell>
-                  </TableRow>
-                ];
-              })}
-              {/* Grand total row */}
-              <TableRow className="bg-purple-100">
-                <TableCell colSpan={hours.length + 2} className="font-bold text-right pr-10 bg-slate-500">
-                  GRAND TOTAL:
-                </TableCell>
-                <TableCell className="text-center font-bold bg-purple-400">
-                  {Object.values(progressiveTotals).reduce((sum, total) => sum + total, 0).toFixed(4)}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  };
-
-
   return (
     <div className="space-y-8" ref={tableRef} onMouseUp={handleMouseUp}>
       {show && <ResponseModal successful={successful} message={message} setShow={setShow} />}
@@ -1050,7 +1084,6 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
       {/* Runtime Table */}
       <div className="border rounded-lg overflow-hidden">
         <div className="bg-gray-500 font-bold px-4 py-2 text-white text-center">RUN TIME TABLE</div>
-
         <Table className="min-w-full">
           <TableHeader>
             <TableRow>
@@ -1079,7 +1112,6 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
       <div className="border rounded-lg overflow-hidden">
         <div className="bg-gray-500 font-bold px-4 py-2 flex justify-between items-center">
           <div className="flex items-center gap-2">
-
             <div className="flex gap-1">
               <Button
                 onClick={handleUndo}
@@ -1089,7 +1121,6 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
                 className="bg-gray-600 text-white"
               >
                 <Undo2 />
-
               </Button>
               <Button
                 onClick={handleRedo}
@@ -1099,24 +1130,20 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
                 className="bg-gray-600 text-white"
               >
                 <Redo2 />
-
               </Button>
             </div>
           </div>
-
           <div>
             <span className='text-white'>INPUT TABLE</span>
           </div>
-
           <div className="flex gap-2">
-            <Popover>
+            <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="bg-slate-500 text-white">
+                <Button variant="outline" size="sm" className="bg-orange-600 text-white">
                   Presets
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-2 grid grid-cols-3 gap-1">
-
                 <div className="flex gap-2 items-center mt-2 w-20">
                   <input
                     type="number"
@@ -1130,13 +1157,15 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
                     variant="outline"
                     onClick={() => {
                       const val = parseFloat(customPreset);
-                      if (!isNaN(val)) applyPreset(val);
+                      if (!isNaN(val)) {
+                        applyPreset(val);
+                        setOpen(false);
+                      }
                     }}
                   >
                     Apply
                   </Button>
                 </div>
-
               </PopoverContent>
             </Popover>
             <Button
@@ -1163,7 +1192,6 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
             >
               Fill All
             </Button>
-            {/* Add the Clear All button here */}
             <Button
               onClick={handleClearAll}
               className="bg-red-600 hover:bg-red-700 text-white"
@@ -1172,21 +1200,11 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
             >
               Clear All
             </Button>
-            <Button
-              onClick={handleStoreData}
-              className="bg-orange-600 text-white"
-            >
-              Store Data
-            </Button>
-
             {loadinbtn2 ? (
               <Button disabled>
                 <Loader2 className="animate-spin mr-2 h-4 w-4" />
                 Save to DB
               </Button>
-
-
-
             ) : (
               <Button
                 onClick={() => handleSaveToDB()}
@@ -1195,10 +1213,7 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
                 <Save />
                 Save to DB
               </Button>
-
             )}
-
-
             <Button
               onClick={viewMode === 'single' ? handleCalculate : handleCalculateAll}
               className="bg-purple-600 text-white"
@@ -1242,8 +1257,7 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
                         pattern="^[0-9]*[.,]?[0-9]*$"
                         value={inputValues[date]?.[hour] ?? ''}
                         onChange={(e) => handleInputChange(date, hour, e.target.value)}
-                        className={`w-20 text-center p-1 text-sm border rounded-md ${isAutoFilled ? 'bg-green-100' : 'bg-gray-500'
-                          } ${isSelected ? 'ring-2 ring-blue-200' : ''}`}
+                        className={`w-20 text-center p-1 text-sm border text-gray-300 rounded-md ${isAutoFilled ? 'bg-green-100' : 'bg-gray-500'} ${isSelected ? 'ring-2 ring-blue-200' : ''}`}
                       />
                     </TableCell>
                   );
@@ -1255,10 +1269,8 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
       </div>
 
       {/* Purple Figures Table */}
-
       {viewMode === 'single' ? (
         <>
-
           {Object.keys(calculatedValues).length > 0 && (
             <div className="border rounded-lg overflow-hidden">
               <div className="bg-purple-500 font-bold px-4 py-2 text-white text-center">PURPLE FIGURES TABLE</div>
@@ -1274,12 +1286,10 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
                 </TableHeader>
                 <TableBody>
                   {dates.map((date, dateIndex) => {
-                    // 1. Sum current day's 06:00-23:00
                     const currentDaySum = hours
                       .filter(hour => hour >= '06')
                       .reduce((sum, hour) => sum + (calculatedValues[date]?.[hour] || 0), 0);
 
-                    // 2. Sum next day's 00:00-05:00 (if exists)
                     const nextDate = dates[dateIndex + 1];
                     const nextDaySum = nextDate
                       ? hours
@@ -1288,7 +1298,6 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
                       : 0;
 
                     const dayTotal = currentDaySum + nextDaySum;
-                    // console.log('Date:', date, 'Current Day Sum:', currentDaySum, 'Next Day Sum:', nextDaySum, 'Day Total:', dayTotal);
 
                     return (
                       <TableRow key={date}>
@@ -1304,8 +1313,6 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
                       </TableRow>
                     );
                   })}
-
-                  {/* Progressive Total Row */}
                   <TableRow className="bg-purple-100">
                     <TableCell colSpan={hours.length + 1} className="font-bold text-right pr-10 bg-slate-400">
                       Progressive Total (06-05):
@@ -1331,33 +1338,66 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
               </Table>
             </div>
           )}
-
-
         </>
       ) : (
         <AllIccidsPurpleFigures />
       )}
+      {/* Input Table export section */}
 
+      <div className="mx-4 mt-4 space-y-4 p-4 border rounded-lg bg-gray-50">
+        <h3 className="text-lg font-semibold">Export Input Table</h3>
 
-      {/* Export Button */}
-      <div className="mx-4 mt-4 space-y-4">
-        {/* Export total Period */}
-        <div className="flex space-x-4">
-          <div className="flex space-x-4">
-            <Button
-              onClick={viewMode === 'single' ? exportToCSV : exportAllToCSV}
-              className="bg-slate-400 text-white className='mr-1'"
-            >
-              Export total Period
-            </Button>
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium w-24">Date Range:</label>
+            <input
+              type="date"
+              value={exportInputStartDate}
+              onChange={(e) => setExportInputStartDate(e.target.value)}
+              className="border rounded p-2 text-sm"
+            />
+            <span>to</span>
+            <input
+              type="date"
+              value={exportInputEndDate}
+              onChange={(e) => setExportInputEndDate(e.target.value)}
+              className="border rounded p-2 text-sm"
+            />
           </div>
-        </div>
 
-        {/* Export per Day with datetime-local input */}
+          <div className="pt-2">
+            <button
+              onClick={exportInputTableToCSV}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
+            >
+              Download Input Table as CSV
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            The CSV will include: Site Name, ICCID, Date, Hour, and Input Value.
+            {exportInputStartDate && exportInputEndDate
+              ? ` Filtered from ${exportInputStartDate} to ${exportInputEndDate}.`
+              : ' Includes all available dates.'}
+          </p>
+        </div>
+      </div>
+
+      {/* Export Purple figures Section */}
+      <div className="mx-4 mt-4 space-y-4 p-4 border rounded-lg bg-gray-50">
+        <h3 className="text-lg font-semibold">Export Purple Figures</h3>
+        <div className="flex space-x-4">
+          <Button
+            onClick={viewMode === 'single' ? exportToCSV : exportAllToCSV}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
+          >
+            Export total Period
+          </Button>
+        </div>
         <div className="flex space-x-4">
           <Button
             onClick={exportPerDay}
-            className="bg-slate-500 text-white className='mr-1'"
+            className="bg-slate-500 text-white"
           >
             Export per Day
           </Button>
@@ -1372,42 +1412,36 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
             />
           </div>
         </div>
-
-        {/* Export per Shift with two datetime-local inputs */}
         <div className="flex space-x-4">
           <Button
             onClick={exportPerShift}
-            className="bg-slate-600 text-white className='mr-1'"
+            className="bg-slate-600 text-white"
           >
             Export per Shift
           </Button>
           <div className="w-400">
             <Label htmlFor="shift-start" className='mr-1'>Shift Start</Label>
-
             <input
               type="datetime-local"
               id="shift-start"
-              value={shiftStart ? shiftStart.replace(/:..$/, ":00") : ''} // Force display minutes to "00"
+              value={shiftStart ? shiftStart.replace(/:..$/, ":00") : ''}
               onChange={handleShiftStartChange}
               className="border rounded p-2"
-              step="3600" // Ensures the picker only allows hour increments 
+              step="3600"
             />
-
           </div>
           <div className="w-400">
             <Label htmlFor="shift-end" className='mr-1'>Shift End</Label>
             <input
               type="datetime-local"
               id="shift-end"
-
-              value={shiftEnd ? shiftEnd.replace(/:..$/, ":00") : ''} // Force display minutes to "00"
+              value={shiftEnd ? shiftEnd.replace(/:..$/, ":00") : ''}
               onChange={handleShiftEndChange}
               className="border rounded p-2"
-              step="3600" // Ensures the picker only allows hour increments 
+              step="3600"
             />
           </div>
         </div>
-
       </div>
     </div>
   );
@@ -1415,11 +1449,6 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
 
 export default RuntimeTableTest;
 
-
 function hasValidDate(dayData: RuntimesAudit): dayData is RuntimesAudit & { date: string } {
   return dayData.date !== null;
 }
-
-
-
-

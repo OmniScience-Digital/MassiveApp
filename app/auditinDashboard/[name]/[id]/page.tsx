@@ -18,6 +18,8 @@ import {
 import RuntimeTable from "@/components/widgets/tables/runtimeTable";
 import Footer from '@/components/layout/footer';
 import Navbar from '@/components/layout/navbar';
+import RuntimeTableTest from "@/components/widgets/tables/runtimetest";
+
 
 const AuditingDashboard = () => {
     const params = useParams();

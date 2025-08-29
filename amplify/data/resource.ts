@@ -28,39 +28,19 @@ const schema = a.schema({
     }).secondaryIndexes((index) => [index("siteId")])
     .authorization((allow) => [allow.publicApiKey()]),
 
-  
-
   Purplefigures: a
     .model({
       siteId: a.string().required(),
-      iccid: a.string().required(),
-      date: a.date().required(),
-      hourValues: a.json(),
-      timestamp: a.string()
-    })
-    .secondaryIndexes((index) => [
-      index('siteId').sortKeys(['date']),
-      index('iccid'),
-      index('date')
+      timestamp: a.string(),
+      firstdate: a.string().required(), // '2025-07-25'
+      lastdate: a.string().required(),  // '2025-08-28'
+      data: a.json(), // JSON array: [{ iccid: string, purpleValues: {} }]
+    }).secondaryIndexes((index) => [
+      index("siteId"),
+      index("firstdate"),
+      index("lastdate")
     ])
     .authorization((allow) => [allow.publicApiKey()])
-
-  // Purplefigures: a
-  // .model({
-  //   siteId: a.string().required(),
-  //   iccid: a.string().required(),
-  //   date: a.string().required(),
-  //   hourValues: a.json(),
-  //   timestamp: a.string()
-  // })
-  // .identifier(['siteId', 'iccid', 'date'])  // Composite PK: enforces uniqueness on siteId + iccid + date
-  // .secondaryIndexes((index) => [
-  //   index('siteId').sortKeys(['date']),
-  //   index('iccid'),
-  //   index('date')
-  // ])
-  // .authorization((allow) => [allow.publicApiKey()])
-
 })
 
 export type Schema = ClientSchema<typeof schema>;

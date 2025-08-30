@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -15,7 +15,7 @@ import { useParams } from 'next/navigation';
 import { createOrUpdateInputValueTable } from '@/service/inputvalues.service';
 import { client } from '@/service/schemaClient';
 import ResponseModal from '../response';
-
+import { createOrUpdatePurpleDaily } from '@/service/purplefigures.Service';
 
 interface RuntimeData {
   hour: string;
@@ -43,7 +43,7 @@ type CellSelection = {
   active: boolean;
 };
 
-const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
+const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
   const dashboardname = decodeURIComponent(params.name as string).toUpperCase();
@@ -73,13 +73,11 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
   const [lastAction, setLastAction] = useState<'manual' | 'auto-fill' | 'preset' | 'bulk'>('manual');
   const [allInputValues, setAllInputValues] = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [allCalculatedValues, setAllCalculatedValues] = useState<Record<string, Record<string, Record<string, number>>>>({});
-  const [selectedDate, setSelectedDate] = useState<string>(''); // State for selected date
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
-
-  //state variables for input csv export
+  // State variables for input csv export
   const [exportInputStartDate, setExportInputStartDate] = useState<string>('');
   const [exportInputEndDate, setExportInputEndDate] = useState<string>('');
-
 
   const tableRef = useRef<HTMLDivElement>(null);
   const currentIccid = allIccids[currentIccidIndex];
@@ -126,7 +124,7 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
   };
 
   // Fetch input values and update state
-  const fetchInputValues = async () => {
+  const fetchInputValues = useCallback(async () => {
     try {
       const iccidInputValues = await getSiteTableValues(id);
       if (!iccidInputValues || iccidInputValues.length === 0) {
@@ -182,12 +180,12 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
       setShow(true);
       setSuccessful(false);
     }
-  };
+  }, [id, currentIccid]);
 
   // Fetch data on mount and when id or selectedDate changes
   useEffect(() => {
     fetchInputValues();
-  }, [id, selectedDate]);
+  }, [id, selectedDate, fetchInputValues]);
 
   // Update inputValues and calculatedValues when currentIccid changes
   useEffect(() => {
@@ -319,11 +317,19 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
       }
     }
 
+    // Update both calculated values and preserve input values
     setCalculatedValues(result);
     setAllCalculatedValues(prev => ({
       ...prev,
       [currentIccid]: result
     }));
+    
+    // Ensure input values are preserved in the allInputValues state
+    setAllInputValues(prev => ({
+      ...prev,
+      [currentIccid]: inputValues
+    }));
+    
     setLoadingBtn(false);
   };
 
@@ -471,24 +477,15 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
 
   const handleSaveToDB = async () => {
     try {
+      // Update the allInputValues with current input values before saving
       const updatedAllInputValues = {
         ...allInputValues,
         [currentIccid]: inputValues,
       };
       setAllInputValues(updatedAllInputValues);
 
-      // Convert to Date objects for proper sorting
-      const sortedDates: string[] = dates
-        .map((date: string) => new Date(date))
-        .sort((a: Date, b: Date) => a.getTime() - b.getTime())
-        .map((date: Date) => date.toISOString().split('T')[0]);
-
-      const firstdate: string = sortedDates[0];
-      const lastdate: string = sortedDates[sortedDates.length - 1];
-
-
-
-      const payload = {
+      // Prepare payload for input values
+      const inputValuePayload = {
         timestamp: new Date().toISOString(),
         data: allIccids.map(iccid => ({
           iccid,
@@ -496,27 +493,33 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
         }))
       };
 
-
+      // Prepare payload for purple figures
       const purpleFigurePayload = {
-        timestamp: new Date().toISOString(),
-        firstdate: firstdate,
-        lastdate: lastdate,
-        data: allIccids.map(iccid => ({
+        data: allIccids.map((iccid) => ({
           iccid,
-          purpleValues: allCalculatedValues[iccid] || {},
-        }))
+          purpleValues: Object.fromEntries(
+            Object.entries(allCalculatedValues[iccid] || {}).map(([date, hours]) => [
+              date,
+              Object.fromEntries(
+                Object.entries(hours).map(([hour, value]) => [hour, value.toString()])
+              ),
+            ])
+          ),
+        })),
       };
 
       setLoadingBtn2(true);
 
-      await createOrUpdateInputValueTable(id, payload);
-    
-      setMessage(`Input values and Purple figures saved.`);
+      // Save both input values and purple figures
+      await createOrUpdateInputValueTable(id, inputValuePayload);
+      await createOrUpdatePurpleDaily(id, purpleFigurePayload);
+
+      setMessage(`Input values and Purple figures saved successfully.`);
       setShow(true);
       setSuccessful(true);
       setLoadingBtn2(false);
     } catch (error) {
-      setMessage(`Failed to save input values: ${error}`);
+      setMessage(`Failed to save data: ${error}`);
       setShow(true);
       setSuccessful(false);
       setLoadingBtn2(false);
@@ -524,8 +527,7 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
     }
   };
 
-  //purple figures export
-
+  // Purple figures export
   const exportToCSV = () => {
     const dayTotals = dates.map((date, dateIndex) => {
       const currentDaySum = hours
@@ -676,8 +678,7 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
     URL.revokeObjectURL(url);
   };
 
-  //input figures export
-
+  // Input figures export
   const exportInputTableToCSV = (): void => {
     // Get the currently visible ICCID(s)
     const visibleIccids: string[] = viewMode === 'single' ? [currentIccid] : allIccids;
@@ -1447,7 +1448,7 @@ const RuntimeTableTest = ({ iccidRuntimes }: RuntimeTableProps) => {
   );
 };
 
-export default RuntimeTableTest;
+export default RuntimeTable;
 
 function hasValidDate(dayData: RuntimesAudit): dayData is RuntimesAudit & { date: string } {
   return dayData.date !== null;

@@ -39,6 +39,7 @@ const schema = a.schema({
   index("siteId"),
   index("iccid"),
   index("date"),
+  index('siteId').sortKeys(['date']),
 ])
 .authorization((allow) => [allow.publicApiKey()])
 

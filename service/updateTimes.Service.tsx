@@ -10,6 +10,7 @@ export const updateSiteTimesById = async (
       nightStop: string;
       extraShiftStart: string;
       extraShiftStop: string;
+      twentyFourhourShift?:boolean
     }
   ) => {
     try {

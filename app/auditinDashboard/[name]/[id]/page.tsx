@@ -39,6 +39,10 @@ const AuditingDashboard = () => {
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
 
+    //save start and end date
+
+       const [dateRange, setDateRange] = useState({startDate:'',endDate:''});
+
     // Fetch all audit sites for navigation
     useEffect(() => {
         const fetchAuditSites = async () => {
@@ -185,7 +189,8 @@ const AuditingDashboard = () => {
         try {
             const startDate = startTime.split("T")[0];
             const endDate = endTime.split("T")[0];
-
+            setDateRange({ startDate: startTime.split("T")[0], endDate: endTime.split("T")[0] });
+         
             const { data: sites, errors } = await client.models.AuditorReports.listAuditorReportsBySiteIdAndDate({
                 siteId: id,
                 date: {
@@ -193,6 +198,7 @@ const AuditingDashboard = () => {
                 }
             });
             
+        
             if (errors) {
                 console.error("Error fetching site:", errors);
                 setMessage(`Error fetching site: ${errors}`);
@@ -365,6 +371,7 @@ const AuditingDashboard = () => {
         }
     };
 
+
 return (
         <div className="min-h-screen flex flex-col relative">
             <Navbar />
@@ -485,7 +492,7 @@ return (
                     </div>
                 </div>
 
-                {siteData && <RuntimeTable iccidRuntimes={siteData} />}
+                {siteData && <RuntimeTable iccidRuntimes={siteData} daterange={dateRange} />}
             </main>
             <Footer />
         </div>

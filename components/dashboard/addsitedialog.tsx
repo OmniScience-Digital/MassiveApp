@@ -62,6 +62,7 @@ const InputModal: React.FC<InputModalProps> = ({ isOpen, reporttype, onClose, on
       nightStop:'23:59',
       extraShiftStart: '23:59',
       extraShiftStop: '23:59',
+      twentyFourhourShift:false
     },
     dynamic_inputs:[],
     dynamic_tables:[],

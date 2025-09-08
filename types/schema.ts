@@ -53,6 +53,7 @@ export type ReportItem = {
     nightStop: string;
     extraShiftStart: string;
     extraShiftStop: string;
+    twentyFourhourShift?:boolean;
   };
   scales: {
     scalename: string;

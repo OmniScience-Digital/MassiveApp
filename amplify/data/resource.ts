@@ -17,7 +17,8 @@ const schema = a.schema({
     siteId: a.string().required(),
     date: a.date().required(),
     scales: a.json().required()
-  }).secondaryIndexes((index) => [index("siteId").sortKeys(["date"])])
+  }).secondaryIndexes((index) => [
+    index("siteId").sortKeys(["date"])])
     .authorization((allow) => [allow.publicApiKey()]),
 
   InputValueTable: a
@@ -25,7 +26,8 @@ const schema = a.schema({
       siteId: a.string().required(),  // Unique identifier
       timestamp: a.string(), // ISO 8601 timestamp
       data: a.json(),        // JSON array: [{ iccid: string, inputValues: {} }]
-    }).secondaryIndexes((index) => [index("siteId")])
+    }).secondaryIndexes((index) => [
+      index("siteId")])
     .authorization((allow) => [allow.publicApiKey()]),
 
   Purplefigures: a

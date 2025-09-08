@@ -231,7 +231,7 @@ export default function DashboardPage() {
     const fetchData = async () => {
 
       const siteData = await getSiteByid();
-
+      
       if (siteData) {
         setSiteData(siteData); // Set the correctly formatted site data
         setSiteName(siteData.siteConstants.siteName);

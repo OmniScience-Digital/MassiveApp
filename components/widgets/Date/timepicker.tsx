@@ -15,10 +15,12 @@ export default function TimeRangePicker({
   Start,
   Stop,
   onChange,
+  
 }: {
   label: string;
   Start: string;
   Stop: string;
+  disabled?: boolean;
   onChange: (start: string, stop: string) => void;
 }) {
   const [start, setStart] = useState(Start);

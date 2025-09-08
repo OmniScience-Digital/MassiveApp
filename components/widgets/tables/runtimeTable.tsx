@@ -16,6 +16,8 @@ import { createOrUpdateInputValueTable } from '@/service/inputvalues.service';
 import { client } from '@/service/schemaClient';
 import ResponseModal from '../response';
 import { createOrUpdatePurpleDaily } from '@/service/purplefigures.Service';
+import DashboardDateSelector from '../requery_audit';
+import { runauditDateReport } from '@/app/api/audit.route';
 
 interface RuntimeData {
   hour: string;
@@ -33,8 +35,14 @@ interface RuntimesAudit {
   scales: Scale[];
 }
 
+interface datesAudit {
+  startDate: string;
+  endDate: string;
+}
+
 interface RuntimeTableProps {
   iccidRuntimes: RuntimesAudit[];
+  daterange: datesAudit;
 }
 
 type CellSelection = {
@@ -42,11 +50,28 @@ type CellSelection = {
   end: { date: string; hour: string } | null;
   active: boolean;
 };
+function getDatesBetween(start: string, end: string): string[] {
+  const dates: string[] = [];
+  let current = new Date(start);
+  const endDate = new Date(end);
 
-const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
+  while (current <= endDate) {
+    dates.push(current.toISOString().split("T")[0]); // format YYYY-MM-DD
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dates;
+}
+
+
+
+const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
   const dashboardname = decodeURIComponent(params.name as string).toUpperCase();
+
+  let queryDates = getDatesBetween(daterange.startDate, daterange.endDate);
+
 
   const allIccids = Array.from(new Set(
     iccidRuntimes.flatMap(day => day.scales.map(scale => scale.iccid))
@@ -55,6 +80,7 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
   const [customPreset, setCustomPreset] = useState('');
   const [loadinbtn, setLoadingBtn] = useState(false);
   const [loadinbtn2, setLoadingBtn2] = useState(false);
+  const [loadinbtn3, setLoadingBtn3] = useState(false);
   const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
@@ -127,13 +153,15 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
   // Fetch input values and update state
   const fetchInputValues = useCallback(async () => {
     try {
+
       const iccidInputValues = await getSiteTableValues(id);
-      if (!iccidInputValues || iccidInputValues.length === 0) {
-        setMessage("No input values found for the site.");
-        setShow(true);
-        setSuccessful(false);
-        return;
-      }
+
+      // if (!iccidInputValues || iccidInputValues.length === 0) {
+      //   setMessage("No input values found for the site.");
+      //   setShow(true);
+      //   setSuccessful(false);
+      //   return;
+      // }
 
       const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
 
@@ -207,6 +235,8 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
       setCalculatedValues({});
     }
   }, [currentIccid, allInputValues, allCalculatedValues]);
+
+
 
   // Generate date-hour values mapping
   const dateToHourValues = iccidRuntimes.reduce((acc, dayData) => {
@@ -324,13 +354,13 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
       ...prev,
       [currentIccid]: result
     }));
-    
+
     // Ensure input values are preserved in the allInputValues state
     setAllInputValues(prev => ({
       ...prev,
       [currentIccid]: inputValues
     }));
-    
+
     // Enable save button after calculation
     setHasCalculated(true);
     setLoadingBtn(false);
@@ -498,6 +528,29 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
         }))
       };
 
+
+      setLoadingBtn2(true);
+
+      // Save both input values and purple figures
+      await createOrUpdateInputValueTable(id, inputValuePayload);
+
+      setMessage(`Input values saved successfully.`);
+      setShow(true);
+      setSuccessful(true);
+      setLoadingBtn2(false);
+
+    } catch (error) {
+      setMessage(`Failed to save data: ${error}`);
+      setShow(true);
+      setSuccessful(false);
+      setLoadingBtn2(false);
+      console.error(error);
+    }
+  };
+
+  //save purple figures
+  const handleSavePurpleToDB = async () => {
+    try {
       // Prepare payload for purple figures
       const purpleFigurePayload = {
         data: allIccids.map((iccid) => ({
@@ -513,25 +566,97 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
         })),
       };
 
-      setLoadingBtn2(true);
+      setLoadingBtn3(true);
 
+      
+      
       // Save both input values and purple figures
-      await createOrUpdateInputValueTable(id, inputValuePayload);
-      await createOrUpdatePurpleDaily(id, purpleFigurePayload);
+     await createOrUpdatePurpleDaily(id, purpleFigurePayload);
 
-      setMessage(`Input values and Purple figures saved successfully.`);
+      setMessage(`Purple figures saved successfully.`);
       setShow(true);
       setSuccessful(true);
-      setLoadingBtn2(false);
-      
+      setLoadingBtn3(false);
+
       // Disable save button after successful save
       setHasCalculated(false);
     } catch (error) {
       setMessage(`Failed to save data: ${error}`);
       setShow(true);
       setSuccessful(false);
-      setLoadingBtn2(false);
+      setLoadingBtn3(false);
       console.error(error);
+    }
+  };
+
+
+  const handleRequery = async () => {
+    try {
+      setLoadingBtn(true);
+
+      const index = queryDates.findIndex(date => date === selectedDate);
+
+      let isdateLast = false;
+      if ((queryDates.length - 1) === index) {
+        isdateLast = true;
+      }
+
+
+      const dateToRequery = selectedDate;
+      if (!dateToRequery) {
+        setMessage("Please select a date first");
+        setShow(true);
+        setSuccessful(false);
+        setLoadingBtn(false);
+        return;
+      }
+
+
+      // List and delete existing records
+      const { data: recordsToDelete, errors } = await client.models.AuditorReports.listAuditorReportsBySiteIdAndDate({
+        siteId: id,
+        date: { eq: dateToRequery }
+      });
+
+      if (errors) {
+        throw new Error(`Failed to fetch records: ${errors[0]?.message || 'Unknown error'}`);
+      }
+
+
+      // Delete all matching records if any exist
+      if (recordsToDelete?.length) {
+        await Promise.all(
+          recordsToDelete.map(record =>
+            client.models.AuditorReports.delete({ id: record.id })
+          )
+        );
+
+      }
+
+      // Run new audit report
+      const auditdate = await runauditDateReport(id, dateToRequery, isdateLast);
+
+      // Refresh the data
+      await fetchInputValues();
+
+      // Recalculate based on view mode
+      if (viewMode === 'single') {
+        handleCalculate();
+      } else {
+        handleCalculateAll();
+      }
+
+      setMessage("Data updated. Requery to fetch new data");
+      setShow(true);
+      setSuccessful(true);
+
+    } catch (error) {
+      console.error("Requery error:", error);
+      setMessage(`Failed to requery data: ${error}`);
+      setShow(true);
+      setSuccessful(false);
+    } finally {
+      setLoadingBtn(false);
     }
   };
 
@@ -1071,12 +1196,20 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
 
   return (
     <div className="space-y-8" ref={tableRef} onMouseUp={handleMouseUp}>
+
       {show && <ResponseModal successful={successful} message={message} setShow={setShow} />}
       {/* Control Buttons */}
       <div className="flex items-center justify-between bg-slate-500 p-1">
         <Button variant="outline" size="sm" onClick={handlePrevious} className='bg-slate-500' disabled={allIccids.length <= 1}>
           <ChevronLeft className="h-4 w-4" /> Previous
         </Button>
+        <DashboardDateSelector
+          dates={queryDates}
+          selectedDate={selectedDate}
+          onDateSelect={setSelectedDate}
+          onRequery={handleRequery}
+          isLoading={loadinbtn || loadinbtn2}
+        />
         <div className="text-sm font-medium text-white">RUN TIME & INPUT TABLE</div>
         <div className="text-sm font-medium text-white">ICCID : {currentIccid} ({currentIccidIndex + 1} of {allIccids.length})</div>
         <Button
@@ -1212,16 +1345,32 @@ const RuntimeTable = ({ iccidRuntimes }: RuntimeTableProps) => {
             {loadinbtn2 ? (
               <Button disabled>
                 <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                Save to DB
+                Save Input to DB
               </Button>
             ) : (
               <Button
                 onClick={() => handleSaveToDB()}
                 className="bg-blue-600 text-white"
+
+              >
+                <Save />
+                Save Input to DB
+              </Button>
+            )}
+
+            {loadinbtn3 ? (
+              <Button disabled>
+                <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                Save Purple Figures to DB
+              </Button>
+            ) : (
+              <Button
+                onClick={() => handleSavePurpleToDB()}
+                className="bg-purple-600 text-white"
                 disabled={!hasCalculated} // Disable if not calculated
               >
                 <Save />
-                Save to DB
+                Save Purple Figures to DB
               </Button>
             )}
             <Button

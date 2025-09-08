@@ -78,7 +78,6 @@ const Automatedreporting = () => {
 
   
 useEffect(() => {
-  console.log(stopTimes);
 }, [stopTimes]); // This will run whenever stopTimes changes
 
 

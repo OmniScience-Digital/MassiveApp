@@ -1416,7 +1416,7 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
                         pattern="^[0-9]*[.,]?[0-9]*$"
                         value={inputValues[date]?.[hour] ?? ''}
                         onChange={(e) => handleInputChange(date, hour, e.target.value)}
-                        className={`w-20 text-center p-1 text-sm border text-gray-300 rounded-md ${isAutoFilled ? 'bg-green-100' : 'bg-gray-500'} ${isSelected ? 'ring-2 ring-blue-200' : ''}`}
+                        className={`w-20 text-center p-1 text-sm border text-white rounded-md ${isAutoFilled ? 'bg-green-100' : 'bg-gray-500'} ${isSelected ? 'ring-2 ring-blue-200' : ''}`}
                       />
                     </TableCell>
                   );

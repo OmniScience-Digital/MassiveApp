@@ -12,7 +12,7 @@ import { NextResponse } from "next/server";
 export async function GET() {
   try {
     // Force no caching
-    const response = await fetch(`${constants.baseUrl}/simulatorstatus`, {
+    const response = await fetch(`${constants.securebaseUrltest}/simulatorstatus`, {
       cache: 'no-store', // ensures we always hit the backend
     });
 

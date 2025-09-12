@@ -13,7 +13,7 @@ export async function POST() {
     console.log('Stop simulation called');
 
     // Force no caching
-    const response = await fetch(`${constants.baseUrl}/stopsimulator`, {
+    const response = await fetch(`${constants.securebaseUrltest}/stopsimulator`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store', // always hit backend

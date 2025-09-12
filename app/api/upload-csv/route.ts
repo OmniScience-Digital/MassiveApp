@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward to your audit route
-    const response = await fetch(`${constants.baseUrl}/sitesimulator`, {
+    const response = await fetch(`${constants.securebaseUrltest}/sitesimulator`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

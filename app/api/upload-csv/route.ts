@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 //securebaseUrltest
 
 
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward to your audit route
-    const response = await fetch(`${constants.securebaseUrltest}/sitesimulator`, {
+    const response = await fetch(`${constants.baseUrl}/sitesimulator`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -65,3 +66,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

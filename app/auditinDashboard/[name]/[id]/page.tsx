@@ -323,7 +323,7 @@ const AuditingDashboard = () => {
            const validSites = siteData.filter(site => site.date !== null) as Site[];
            const filteredSiteData = mergeSitesByDate(validSites);
 
-    
+
             setSiteData(filteredSiteData);
             return filteredSiteData;
         } catch (error) {

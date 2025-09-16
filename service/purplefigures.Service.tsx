@@ -34,7 +34,7 @@ import { client } from "./schemaClient";
 //         item => item.siteId === siteId && item.iccid === iccid
 //         );
 
-        
+
 //         if (existingRowArray.length > 0) {
 //           // 2A. Update existing row
 //           const existingRow = existingRowArray[0];
@@ -105,6 +105,7 @@ export const createOrUpdatePurpleDaily = async (
       throw new Error("Data must be an array");
     }
 
+    console.log(data);
     const promises: Promise<any>[] = [];
 
     for (const entry of data) {
@@ -125,24 +126,38 @@ export const createOrUpdatePurpleDaily = async (
               item => item.siteId === siteId && item.iccid === iccid
             );
 
+
             if (existingRow) {
-              // Update existing row
+
+              // Update existing row only if values actually change
               const existingPurpleValues =
                 typeof existingRow.purpleValues === "string"
                   ? JSON.parse(existingRow.purpleValues)
                   : existingRow.purpleValues || {};
 
-              const { data: updated, errors } = await client.models.Purplefigures.update({
-                id: existingRow.id,
-                siteId,
-                iccid,
-                date,
-                purpleValues: JSON.stringify({ ...existingPurpleValues, ...hours }),
-              });
+              // Check if any values are actually different
+              const hasChanges = Object.keys(hours).some(
+                key => existingPurpleValues[key] !== hours[key]
+              );
 
-              if (errors) throw errors;
-              return updated;
+              if (hasChanges) {
+                const { data: updated, errors } = await client.models.Purplefigures.update({
+                  id: existingRow.id,
+                  siteId,
+                  iccid,
+                  date,
+                  purpleValues: JSON.stringify({ ...existingPurpleValues, ...hours }),
+                });
+
+                if (errors) throw errors;
+                return updated;
+              } else {
+                console.log('No changes detected, skipping update');
+                return existingRow; // Return the existing row without updating
+              }
+
             } else {
+              console.log('not existingRow');
               // Create new row
               const { data: created, errors } = await client.models.Purplefigures.create({
                 siteId,

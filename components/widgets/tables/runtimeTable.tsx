@@ -117,7 +117,7 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
   const getSiteTableValues = async (siteId: string) => {
     try {
       
-    // const { data: inputvalues, errors } = await client.models.InputValueTable.listInputValueTableBySiteId({ siteId });
+     //const { data: inputvalues, errors } = await client.models.InputValueTable.listInputValueTableBySiteId({ siteId });
 
     // Then use the custom query name:
       const { data: inputvalues, errors } = await client.models.InputValueTable.listBySiteAndDate({
@@ -127,7 +127,7 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
         }
       });
 
-console.log('Filtered data:', inputvalues);
+// console.log('Filtered data:', inputvalues);
 
       console.log(daterange.startDate, daterange.endDate);
       if (errors) {

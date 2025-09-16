@@ -21,35 +21,44 @@ const schema = a.schema({
     index("siteId").sortKeys(["date"])])
     .authorization((allow) => [allow.publicApiKey()]),
 
+  // InputValueTable: a
+  //   .model({
+  //     siteId: a.string().required(),  // Unique identifier
+  //     timestamp: a.string(), // ISO 8601 timestamp
+  //     data: a.json(),        // JSON array: [{ iccid: string, inputValues: {} }]
+  //   }).secondaryIndexes((index) => [
+  //     index("siteId")])
+  //   .authorization((allow) => [allow.publicApiKey()]),
 
-  InputValueTable: a
-    .model({
-      siteId: a.string().required(),
-      timestamp: a.string(),
-      data: a.json(),
-    }).secondaryIndexes((index) => [
-      index("siteId")
-        .sortKeys(["timestamp"])
-        .queryField("listBySiteAndDate")
-    ])
-    .authorization((allow) => [allow.publicApiKey()]),
+  // In your schema:
+InputValueTable: a
+  .model({
+    siteId: a.string().required(),
+    timestamp: a.string(),
+    data: a.json(),
+  }).secondaryIndexes((index) => [
+    index("siteId")
+      .sortKeys(["timestamp"])
+      .queryField("listBySiteAndDate") // Custom query name
+  ])
+  .authorization((allow) => [allow.publicApiKey()]),
 
   Purplefigures: a
-    .model({
-      siteId: a.string().required(),
-      iccid: a.string().required(),
-      date: a.string().required(),    // '2025-08-14'
-      purpleValues: a.json(),         // { '00:00': '...', '01:00': '...' }
-    })
-    .secondaryIndexes((index) => [
-      index("siteId"),
-      index("iccid"),
-      index("date"),
-      index('siteId').sortKeys(['date']),
-    ])
-    .authorization((allow) => [allow.publicApiKey()])
+  .model({
+  siteId: a.string().required(),
+  iccid: a.string().required(),
+  date: a.string().required(),    // '2025-08-14'
+  purpleValues: a.json(),         // { '00:00': '...', '01:00': '...' }
+})
+.secondaryIndexes((index) => [
+  index("siteId"),
+  index("iccid"),
+  index("date"),
+  index('siteId').sortKeys(['date']),
+])
+.authorization((allow) => [allow.publicApiKey()])
 
-
+  
 })
 
 export type Schema = ClientSchema<typeof schema>;

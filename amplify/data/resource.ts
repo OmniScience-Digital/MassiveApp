@@ -51,7 +51,6 @@ const schema = a.schema({
   purpleValues: a.json(),         // { '00:00': '...', '01:00': '...' }
 })
 .secondaryIndexes((index) => [
-  index("siteId"),
   index("iccid"),
   index("date"),
   index('siteId').sortKeys(['date']),

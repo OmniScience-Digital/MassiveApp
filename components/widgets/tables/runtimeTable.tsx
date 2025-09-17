@@ -129,6 +129,8 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
         filter: { siteId: { eq: siteId } }
       });
 
+
+
       if (errors) {
         console.error("Error fetching site:", errors);
         setMessage(`Error fetching site: ${errors}`);

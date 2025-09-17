@@ -105,7 +105,6 @@ export const createOrUpdatePurpleDaily = async (
       throw new Error("Data must be an array");
     }
 
-    console.log(data);
     const promises: Promise<any>[] = [];
 
     for (const entry of data) {
@@ -135,12 +134,7 @@ export const createOrUpdatePurpleDaily = async (
                   ? JSON.parse(existingRow.purpleValues)
                   : existingRow.purpleValues || {};
 
-              // Check if any values are actually different
-              const hasChanges = Object.keys(hours).some(
-                key => existingPurpleValues[key] !== hours[key]
-              );
-
-              if (hasChanges) {
+          
                 const { data: updated, errors } = await client.models.Purplefigures.update({
                   id: existingRow.id,
                   siteId,
@@ -151,10 +145,7 @@ export const createOrUpdatePurpleDaily = async (
 
                 if (errors) throw errors;
                 return updated;
-              } else {
-                console.log('No changes detected, skipping update');
-                return existingRow; // Return the existing row without updating
-              }
+           
 
             } else {
               console.log('not existingRow');

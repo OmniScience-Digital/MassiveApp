@@ -8,3 +8,12 @@ npm install --legacy-peer-deps
 
  
 
+ ---
+   "scripts": {
+    "dev": "next dev",
+    "build": "npm run format && npm run lint && next build",
+    "start": "next start",
+    "format": "npx prettier --write \"./**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
+    "lint": "next lint --fix"
+  },
+

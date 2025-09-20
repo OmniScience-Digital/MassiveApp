@@ -224,55 +224,55 @@ export const InputTable = ({
     saveToHistory({});
   };
 
-
   //save input figures
-  
+
   const handleSaveToDB = async () => {
-  try {
-    // Update the allInputValues with current input values before saving
-    const updatedAllInputValues = {
-      ...allInputValues,
-      [currentIccid]: inputValues,
-    };
-    setAllInputValues(updatedAllInputValues);
+    try {
+      // Update the allInputValues with current input values before saving
+      const updatedAllInputValues = {
+        ...allInputValues,
+        [currentIccid]: inputValues,
+      };
+      setAllInputValues(updatedAllInputValues);
 
-    // Prepare payload for input values - flattened to match InputTable schema
-    const inputValuePayload = allIccids.flatMap((iccid) => {
-      const iccidInputValues = updatedAllInputValues[iccid] || {};
-      
-      return Object.entries(iccidInputValues).map(([rowdate, hourlyValues]) => ({
-        siteId: id, // assuming 'id' is your siteId
-        iccid,
-        rowdate,
-        inputValues: Object.fromEntries(
-          Array.from({ length: 24 }, (_, hour) => {
-            const hourKey = hour.toString().padStart(2, '0');
-            const value = hourlyValues[hourKey];
-            return [hourKey, value !== undefined ? value.toString() : ""];
-          })
-        )
-      }));
-    });
+      // Prepare payload for input values - flattened to match InputTable schema
+      const inputValuePayload = allIccids.flatMap((iccid) => {
+        const iccidInputValues = updatedAllInputValues[iccid] || {};
 
-    setLoadingBtn2(true);
+        return Object.entries(iccidInputValues).map(
+          ([rowdate, hourlyValues]) => ({
+            siteId: id, // assuming 'id' is your siteId
+            iccid,
+            rowdate,
+            inputValues: Object.fromEntries(
+              Array.from({ length: 24 }, (_, hour) => {
+                const hourKey = hour.toString().padStart(2, "0");
+                const value = hourlyValues[hourKey];
+                return [hourKey, value !== undefined ? value.toString() : ""];
+              }),
+            ),
+          }),
+        );
+      });
 
+      setLoadingBtn2(true);
 
-    // Save input values
-    await createOrUpdateInputValueTable(inputValuePayload);
+      // Save input values
+      await createOrUpdateInputValueTable(inputValuePayload);
 
-    setMessage(`Input values saved successfully.`);
-    setShow(true);
-    setSuccessful(true);
-    setLoadingBtn2(false);
-  } catch (error) {
-    setMessage(`Failed to save data: ${error}`);
-    setShow(true);
-    setSuccessful(false);
-    setLoadingBtn2(false);
-    console.error(error);
-  }
-};
-  
+      setMessage(`Input values saved successfully.`);
+      setShow(true);
+      setSuccessful(true);
+      setLoadingBtn2(false);
+    } catch (error) {
+      setMessage(`Failed to save data: ${error}`);
+      setShow(true);
+      setSuccessful(false);
+      setLoadingBtn2(false);
+      console.error(error);
+    }
+  };
+
   const handleSavePurpleToDB = async () => {
     try {
       // Prepare payload for purple figures

@@ -75,11 +75,12 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
   // Fetch site table values
   const getSiteTableValues = async (siteId: string) => {
     try {
-      const { data: inputvalues, errors } = await client.models.InputTable.listInputTableBySiteIdAndRowdate({
-          siteId: siteId ,
-          rowdate: { between: [daterange.startDate, daterange.endDate] }
-      });
-      
+      const { data: inputvalues, errors } =
+        await client.models.InputTable.listInputTableBySiteIdAndRowdate({
+          siteId: siteId,
+          rowdate: { between: [daterange.startDate, daterange.endDate] },
+        });
+
       console.log(inputValues);
 
       if (errors) {
@@ -99,11 +100,22 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
               .replace(/^"+|"+$/g, "");
             const parsed = JSON.parse(clean);
             // Ensure it's a Record<string, string>
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            if (
+              parsed &&
+              typeof parsed === "object" &&
+              !Array.isArray(parsed)
+            ) {
               parsedInputValues = parsed;
             }
-          } else if (inputvalue.inputValues && typeof inputvalue.inputValues === "object" && !Array.isArray(inputvalue.inputValues)) {
-            parsedInputValues = inputvalue.inputValues as Record<string, string>;
+          } else if (
+            inputvalue.inputValues &&
+            typeof inputvalue.inputValues === "object" &&
+            !Array.isArray(inputvalue.inputValues)
+          ) {
+            parsedInputValues = inputvalue.inputValues as Record<
+              string,
+              string
+            >;
           }
         } catch (error) {
           parsedInputValues = {};

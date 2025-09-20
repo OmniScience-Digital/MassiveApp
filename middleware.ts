@@ -28,7 +28,6 @@ export default async function middleware(request: NextRequest) {
       }
   })
 
- // console.log('authenticated ',authenticated)
 
     if (isProtectedRoute && !authenticated) {
       return NextResponse.redirect(new URL('/', request.nextUrl));

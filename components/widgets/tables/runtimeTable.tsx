@@ -125,9 +125,11 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
       //   }
       // });
 
-     const { data: inputvalues, errors } = await client.models.InputValueTable.list({
+      const { data: inputvalues, errors } = await client.models.InputValueTable.list({
         filter: { siteId: { eq: siteId } }
       });
+
+      console.log(inputvalues);
 
 
 
@@ -165,73 +167,74 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
 
   // Fetch purple figures values
   const getPurpleTableValues = async (siteId: string) => {
-  try {
-    const { data: purplevalues, errors } = await client.models.Purplefigures.list({
-      filter: {
-        siteId: { eq: siteId },
-        date: { between: [daterange.startDate, daterange.endDate] }
-      }
-    });
+    try {
 
-    if (errors) {
-      console.error("Error fetching purple figures:", errors);
+      const { data: purplevalues, errors } =
+
+        await client.models.Purplefigures.listPurplefiguresBySiteIdAndDate({
+          siteId: siteId,
+          date: { between: [daterange.startDate, daterange.endDate] }
+        });
+
+      if (errors) {
+        console.error("Error fetching purple figures:", errors);
+        return {};
+      }
+
+
+
+      const processedData: Record<string, Record<string, Record<string, number>>> = {};
+
+      purplevalues.forEach((entry: any) => {
+        const iccid = entry.iccid;
+        const date = entry.date;
+
+        if (!processedData[iccid]) {
+          processedData[iccid] = {};
+        }
+
+        if (!processedData[iccid][date]) {
+          processedData[iccid][date] = {};
+        }
+
+        // Parse the purpleValues JSON string first
+        let parsedPurpleValues: Record<string, any> = {};
+
+        try {
+          if (typeof entry.purpleValues === 'string') {
+            parsedPurpleValues = JSON.parse(entry.purpleValues);
+          } else if (typeof entry.purpleValues === 'object') {
+            parsedPurpleValues = entry.purpleValues;
+          }
+        } catch (parseError) {
+          console.error("Error parsing purpleValues JSON:", parseError, "for entry:", entry);
+          parsedPurpleValues = {};
+        }
+
+        // Process the parsed purpleValues
+        Object.entries(parsedPurpleValues).forEach(([hour, value]) => {
+
+          let numericValue: number;
+
+          if (typeof value === 'string') {
+            numericValue = parseFloat(value) || 0;
+          } else if (typeof value === 'number') {
+            numericValue = value;
+          } else {
+            numericValue = 0;
+          }
+
+          processedData[iccid][date][hour] = numericValue;
+        });
+      });
+
+
+      return processedData;
+    } catch (error) {
+      console.error("Error in getPurpleTableValues:", error);
       return {};
     }
-
-    
-    
-    const processedData: Record<string, Record<string, Record<string, number>>> = {};
-
-    purplevalues.forEach((entry: any) => {
-      const iccid = entry.iccid;
-      const date = entry.date;
-
-      if (!processedData[iccid]) {
-        processedData[iccid] = {};
-      }
-
-      if (!processedData[iccid][date]) {
-        processedData[iccid][date] = {};
-      }
-
-      // Parse the purpleValues JSON string first
-      let parsedPurpleValues: Record<string, any> = {};
-      
-      try {
-        if (typeof entry.purpleValues === 'string') {
-          parsedPurpleValues = JSON.parse(entry.purpleValues);
-        } else if (typeof entry.purpleValues === 'object') {
-          parsedPurpleValues = entry.purpleValues;
-        }
-      } catch (parseError) {
-        console.error("Error parsing purpleValues JSON:", parseError, "for entry:", entry);
-        parsedPurpleValues = {};
-      }
-
-      // Process the parsed purpleValues
-      Object.entries(parsedPurpleValues).forEach(([hour, value]) => {
-        
-        let numericValue: number;
-
-        if (typeof value === 'string') {
-          numericValue = parseFloat(value) || 0;
-        } else if (typeof value === 'number') {
-          numericValue = value;
-        } else {
-          numericValue = 0;
-        }
-
-        processedData[iccid][date][hour] = numericValue;
-      });
-    });
-
-  
-    return processedData;
-  } catch (error) {
-    console.error("Error in getPurpleTableValues:", error);
-    return {};
-  }
-};
+  };
 
   // Fetch input values and purple values
   const fetchInputValues = useCallback(async () => {
@@ -241,7 +244,7 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
         getPurpleTableValues(id)
       ]);
 
-    
+
       const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
       const loadedPurpleValues: Record<string, Record<string, Record<string, number>>> = iccidPurpleValues;
 
@@ -303,10 +306,10 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
 
       if (matchedPurpleKey) {
         setCalculatedValues(loadedPurpleValues[matchedPurpleKey] || {});
-        
+
       } else {
         setCalculatedValues({});
-        
+
       }
 
       // Enable save button if purple values exist
@@ -327,7 +330,7 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
     fetchInputValues();
   }, [id, selectedDate, fetchInputValues]);
 
-  
+
   // Update inputValues and calculatedValues when currentIccid changes
   useEffect(() => {
     const normalizedCurrent = normalize(currentIccid);
@@ -651,7 +654,7 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
 
       setLoadingBtn2(true);
 
-    
+
       // Save both input values and purple figures
       await createOrUpdateInputValueTable(id, inputValuePayload);
 

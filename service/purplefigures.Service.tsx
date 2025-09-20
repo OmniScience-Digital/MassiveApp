@@ -15,7 +15,10 @@ export const createOrUpdatePurpleDaily = async (
 
     if (!Array.isArray(data)) {
       throw new Error("Data must be an array");
+
     }
+
+
 
     const promises: Promise<any>[] = [];
 
@@ -37,9 +40,6 @@ export const createOrUpdatePurpleDaily = async (
               item => item.siteId === siteId && item.iccid === iccid
             );
 
-            console.log(existingRow);
-            console.log(entry);
-            
 
             if (existingRow) {
 
@@ -49,29 +49,23 @@ export const createOrUpdatePurpleDaily = async (
                   ? JSON.parse(existingRow.purpleValues)
                   : existingRow.purpleValues || {};
 
-          
-                // const { data: updated, errors } = await client.models.Purplefigures.update({
-                //   id: existingRow.id,
-                //   siteId: existingRow.siteId,   
-                //   iccid: existingRow.iccid,     
-                //   date: existingRow.date,       
-                //   purpleValues: JSON.stringify({ ...existingPurpleValues, ...hours }),
-                // });
 
-                // const { data: updated, errors } = await client.models.Purplefigures.update({
-                //     id: exactRecord[0].id,
-                //     siteId: exactRecord[0].siteId, // Must match exactly
-                //     date: exactRecord[0].date,     // Must match exactly  
-                //     iccid: exactRecord[0].iccid,
-                //     purpleValues: { ...existingPurpleValues, ...hours }
-                //   });
 
-                // if (errors) throw errors;
-                // return updated;
-           
+              const { data: updated, errors: errors } = await client.models.Purplefigures.update({
+                id: existingRow.id,
+                siteId: existingRow.siteId,
+                date: existingRow.date,
+                iccid: existingRow.iccid,
+                purpleValues: JSON.stringify({ ...existingPurpleValues, ...hours })
+              });
+
+            
+              if (errors) throw errors;
+              return updated;
+
 
             } else {
-              console.log('not existingRow');
+
               // Create new row
               const { data: created, errors } = await client.models.Purplefigures.create({
                 siteId,

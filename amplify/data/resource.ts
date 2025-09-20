@@ -39,8 +39,6 @@ const schema = a.schema({
     })
     .secondaryIndexes((index) => [
       index("siteId").sortKeys(["rowdate"]),
-      index("iccid"),
-      index("rowdate"),
     ])
     .authorization((allow) => [allow.publicApiKey()]),
 

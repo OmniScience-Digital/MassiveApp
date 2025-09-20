@@ -201,6 +201,10 @@ const AuditingDashboard = () => {
     try {
       const startDate = startTime.split("T")[0];
       const endDate = endTime.split("T")[0];
+
+      console.log(startDate);
+      console.log(endDate);
+      
       setDateRange({
         startDate: startTime.split("T")[0],
         endDate: endTime.split("T")[0],

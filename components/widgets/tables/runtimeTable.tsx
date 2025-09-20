@@ -75,13 +75,20 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
   // Fetch site table values
   const getSiteTableValues = async (siteId: string) => {
     try {
-      const { data: inputvalues, errors } =
-        await client.models.InputTable.listInputTableBySiteIdAndRowdate({
-          siteId: siteId,
-          rowdate: { between: [daterange.startDate, daterange.endDate] },
-        });
+      // const { data: inputvalues, errors } =
+      //   await client.models.InputTable.listInputTableBySiteIdAndRowdate({
+      //     siteId: siteId,
+      //     //rowdate: { between: [daterange.startDate, daterange.endDate] },
+      //   });
 
-      console.log(inputValues);
+      // Variation 2: Check if it wants the sort key as a separate parameter
+      const { data: inputvalues, errors } = await client.models.InputTable.listInputTableBySiteIdAndRowdate({
+  siteId: siteId,
+  rowdate: {
+    between: [daterange.startDate, daterange.endDate]
+  }
+});
+      console.log(daterange);
 
       if (errors) {
         console.error("Error fetching site:", errors);

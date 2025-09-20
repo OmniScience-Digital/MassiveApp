@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from 'next/navigation';
+import { useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash, Edit, Save, Check, Loader2 } from "lucide-react";
@@ -15,16 +15,19 @@ import {
 } from "@/components/ui/dialog";
 import { ReportItem } from "@/types/schema";
 import ResponseModal from "../response";
-import { createDynamicTable, deleteDynamicTable } from "@/service/dynamicTable.service";
-
+import {
+  createDynamicTable,
+  deleteDynamicTable,
+} from "@/service/dynamicTable.service";
 
 export interface DynamicTableProps {
   table: ReportItem["dynamic_tables"];
   tableCount: number;
-  setDynamictables: React.Dispatch<React.SetStateAction<ReportItem["dynamic_tables"]>>;
+  setDynamictables: React.Dispatch<
+    React.SetStateAction<ReportItem["dynamic_tables"]>
+  >;
   setDbTableCount: React.Dispatch<React.SetStateAction<number>>;
 }
-
 
 export default function DynamicTable({
   table,
@@ -32,8 +35,6 @@ export default function DynamicTable({
   setDbTableCount,
   setDynamictables,
 }: DynamicTableProps) {
-
-
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
   const [headerName, setHeaderName] = useState(table[0].tableName);
@@ -42,29 +43,25 @@ export default function DynamicTable({
   const [loadingSave, setloadingSave] = useState(false);
   const [loadingDelete, setloadingDelete] = useState(false);
 
-
-
   const [tables, setTables] = useState<ReportItem["dynamic_tables"]>(() => {
-    return table.map(t => ({
+    return table.map((t) => ({
       ...t,
-      tableName: t.tableName || headerName
+      tableName: t.tableName || headerName,
     }));
   });
-
 
   const [isEdited, setIsEdited] = useState(false);
   const [headerEdited, setHeaderEdited] = useState(false);
 
-
   //response hooks
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
 
   // Update tableName when headerName changes
   useEffect(() => {
     if (tables.length > 0 && headerEdited) {
-      setTables(prevTables => {
+      setTables((prevTables) => {
         return prevTables.map((t, index) => {
           if (index === 0) {
             return { ...t, tableName: headerName };
@@ -89,12 +86,14 @@ export default function DynamicTable({
 
   // Save function
 
-      
   const handleSave = async () => {
     try {
-      setloadingSave(true)
+      setloadingSave(true);
 
-      const saveTabletoDb = await createDynamicTable(id as string, tables as ReportItem['dynamic_tables']);
+      const saveTabletoDb = await createDynamicTable(
+        id as string,
+        tables as ReportItem["dynamic_tables"],
+      );
 
       if (saveTabletoDb) {
         setSuccessful(true);
@@ -102,39 +101,38 @@ export default function DynamicTable({
         setloadingSave(false);
         setShow(true);
         // Update tableCount to match the new state
-         setDynamictables(saveTabletoDb.table);
+        setDynamictables(saveTabletoDb.table);
         setDbTableCount(tableCount + 1);
       }
-
-
-
     } catch (error) {
-      console.error('Error creating table:', error);
+      console.error("Error creating table:", error);
       setSuccessful(false);
-      setMessage('Failed to create table');
+      setMessage("Failed to create table");
       setShow(true);
     } finally {
       setIsEdited(false);
       setHeaderEdited(false);
-      setloadingSave(false)
+      setloadingSave(false);
     }
   };
-
 
   const addRow = (tableId: number) => {
     const updatedTables = tables.map((table) =>
       table.id === tableId
         ? {
-          ...table,
-          data: [
-            ...table.data,
-            {
-              id: Date.now(),
-              ...table.columns.reduce((acc, column) => ({ ...acc, [column]: "" }), {}),
-            },
-          ],
-        }
-        : table
+            ...table,
+            data: [
+              ...table.data,
+              {
+                id: Date.now(),
+                ...table.columns.reduce(
+                  (acc, column) => ({ ...acc, [column]: "" }),
+                  {},
+                ),
+              },
+            ],
+          }
+        : table,
     );
     setTables(updatedTables);
   };
@@ -143,10 +141,10 @@ export default function DynamicTable({
     const updatedTables = tables.map((table) =>
       table.id === tableId
         ? {
-          ...table,
-          data: table.data.filter((row) => row.id !== rowId),
-        }
-        : table
+            ...table,
+            data: table.data.filter((row) => row.id !== rowId),
+          }
+        : table,
     );
     setTables(updatedTables);
   };
@@ -155,14 +153,14 @@ export default function DynamicTable({
     const updatedTables = tables.map((table) =>
       table.id === tableId
         ? {
-          ...table,
-          columns: [...table.columns, `Column ${table.columns.length + 1}`],
-          data: table.data.map((row) => ({
-            ...row,
-            [`Column ${table.columns.length + 1}`]: "",
-          })),
-        }
-        : table
+            ...table,
+            columns: [...table.columns, `Column ${table.columns.length + 1}`],
+            data: table.data.map((row) => ({
+              ...row,
+              [`Column ${table.columns.length + 1}`]: "",
+            })),
+          }
+        : table,
     );
     setTables(updatedTables);
   };
@@ -173,15 +171,15 @@ export default function DynamicTable({
       const updatedTables = tables.map((table) =>
         table.id === tableId
           ? {
-            ...table,
-            columns: table.columns.filter((_, i) => i !== columnIndex),
-            data: table.data.map((row) => {
-              const newRow = { ...row };
-              delete newRow[table.columns[columnIndex]];
-              return newRow;
-            }),
-          }
-          : table
+              ...table,
+              columns: table.columns.filter((_, i) => i !== columnIndex),
+              data: table.data.map((row) => {
+                const newRow = { ...row };
+                delete newRow[table.columns[columnIndex]];
+                return newRow;
+              }),
+            }
+          : table,
       );
       setTables(updatedTables);
     }
@@ -191,50 +189,44 @@ export default function DynamicTable({
     tableId: number,
     rowId: number,
     columnIndex: number,
-    value: string
+    value: string,
   ) => {
     const updatedTables = tables.map((table) =>
       table.id === tableId
         ? {
-          ...table,
-          data: table.data.map((row) =>
-            row.id === rowId
-              ? { ...row, [table.columns[columnIndex]]: value }
-              : row
-          ),
-        }
-        : table
+            ...table,
+            data: table.data.map((row) =>
+              row.id === rowId
+                ? { ...row, [table.columns[columnIndex]]: value }
+                : row,
+            ),
+          }
+        : table,
     );
     setTables(updatedTables);
   };
 
   const handleDeleteComponent = async () => {
-
-
     try {
-
       setloadingDelete(true);
-      const sites = await deleteDynamicTable(id as string, (tables[0].id) as number);
-
+      const sites = await deleteDynamicTable(
+        id as string,
+        tables[0].id as number,
+      );
 
       setDynamictables(sites);
       setSuccessful(true);
-      setMessage('Table deleted successfully');
+      setMessage("Table deleted successfully");
       setloadingDelete(false);
       setShow(true);
-
-
     } catch (error) {
-      console.error('Error deleting table:', error);
+      console.error("Error deleting table:", error);
       setSuccessful(false);
-      setMessage('Failed to delete table');
+      setMessage("Failed to delete table");
       setloadingDelete(false);
       setShow(true);
-
-
     }
   };
-
 
   const isDisabled = !(isEdited || headerEdited);
 
@@ -300,7 +292,6 @@ export default function DynamicTable({
                 Please select available inputs.
               </DialogDescription>
             </DialogHeader>
-
           </DialogContent>
         </Dialog>
 
@@ -338,22 +329,22 @@ export default function DynamicTable({
                             const updatedTables = tables.map((t) =>
                               t.id === table.id
                                 ? {
-                                  ...t,
-                                  columns: t.columns.map((col, i) =>
-                                    i === columnIndex ? e.target.value : col
-                                  ),
-                                  data: t.data.map((row) => {
-                                    const newRow = { ...row };
-                                    const oldKey = column;
-                                    const newKey = e.target.value;
-                                    if (oldKey in newRow) {
-                                      newRow[newKey] = newRow[oldKey];
-                                      delete newRow[oldKey];
-                                    }
-                                    return newRow;
-                                  }),
-                                }
-                                : t
+                                    ...t,
+                                    columns: t.columns.map((col, i) =>
+                                      i === columnIndex ? e.target.value : col,
+                                    ),
+                                    data: t.data.map((row) => {
+                                      const newRow = { ...row };
+                                      const oldKey = column;
+                                      const newKey = e.target.value;
+                                      if (oldKey in newRow) {
+                                        newRow[newKey] = newRow[oldKey];
+                                        delete newRow[oldKey];
+                                      }
+                                      return newRow;
+                                    }),
+                                  }
+                                : t,
                             );
                             setTables(updatedTables);
                           }}
@@ -379,13 +370,13 @@ export default function DynamicTable({
                         <td key={columnIndex} className="border p-2">
                           <Input
                             type="text"
-                             value={row[column] || ''}
+                            value={row[column] || ""}
                             onChange={(e) =>
                               handleCellEdit(
                                 table.id,
                                 row.id,
                                 columnIndex,
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             className="w-full"
@@ -408,31 +399,41 @@ export default function DynamicTable({
             </div>
           </div>
         ))}
-        {show && <ResponseModal successful={successful} message={message} setShow={setShow} />}
+        {show && (
+          <ResponseModal
+            successful={successful}
+            message={message}
+            setShow={setShow}
+          />
+        )}
       </div>
 
       <div className="flex justify-end">
-
-
-        {loadingDelete ? (<Button className="mr-2" disabled>
-          <Loader2 className="animate-spin" />
-          Please wait
-        </Button>) : (
+        {loadingDelete ? (
+          <Button className="mr-2" disabled>
+            <Loader2 className="animate-spin" />
+            Please wait
+          </Button>
+        ) : (
           <Button
             variant="destructive"
             onClick={handleDeleteComponent}
             className="mx-3"
           >
             <Trash className="h-4 w-4 mr-2" /> Delete
-          </Button>)}
+          </Button>
+        )}
 
-        {loadingSave ? (<Button className="mr-2" disabled>
-          <Loader2 className="animate-spin" />
-          Please wait
-        </Button>) : (
+        {loadingSave ? (
+          <Button className="mr-2" disabled>
+            <Loader2 className="animate-spin" />
+            Please wait
+          </Button>
+        ) : (
           <Button onClick={handleSave} disabled={isDisabled}>
             <Save className="h-4 w-4 mr-2" /> Save
-          </Button>)}
+          </Button>
+        )}
       </div>
     </div>
   );

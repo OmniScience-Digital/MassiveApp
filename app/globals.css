@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
 @keyframes progress {
   0% {
     transform: translateX(-100%);

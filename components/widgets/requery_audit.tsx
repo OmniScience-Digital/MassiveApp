@@ -16,12 +16,12 @@ interface DashboardDateSelectorProps {
   isLoading?: boolean;
 }
 
-const DashboardDateSelector = ({ 
-  dates, 
-  selectedDate, 
-  onDateSelect, 
+const DashboardDateSelector = ({
+  dates,
+  selectedDate,
+  onDateSelect,
   onRequery,
-  isLoading = false
+  isLoading = false,
 }: DashboardDateSelectorProps) => {
   return (
     <div className="flex items-center gap-2 ml-4">
@@ -39,8 +39,8 @@ const DashboardDateSelector = ({
           </SelectContent>
         </Select>
       </div>
-      
-      <Button 
+
+      <Button
         onClick={onRequery}
         disabled={isLoading}
         className="bg-blue-600 hover:bg-blue-700 text-white"

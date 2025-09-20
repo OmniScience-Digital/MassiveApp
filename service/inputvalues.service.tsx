@@ -1,198 +1,152 @@
 import { client } from "./schemaClient";
 
 export const createOrUpdateInputValueTable = async (
-    siteId: string,
-    payload: {
-      timestamp: string;
-      data: Array<{
-        iccid: string;
-        inputValues: Record<string, Record<string, string>>;
-      }>;
+  payload: Array<{
+    siteId: string;
+    iccid: string;
+    rowdate: string;
+    inputValues: Record<string, string>;
+  }>,
+) => {
+  try {
+    // Validate input data
+    if (!Array.isArray(payload)) {
+      throw new Error("Payload must be an array");
     }
-  ) => {
-    try {
-      const { timestamp, data } = payload;
-  
-      // Validate input data
-      if (!Array.isArray(data)) {
-        throw new Error("Data must be an array");
-      }
-  
-      // 1. Find existing record - ONLY filter by siteId
-      const { data: existingRecords, errors: queryErrors } = 
-        await client.models.InputValueTable.list({
-          filter: {
-            siteId: { eq: siteId }
-          },
-          limit: 1
-        });
-  
+
+    const results = [];
+
+    for (const item of payload) {
+      const { siteId, iccid, rowdate, inputValues } = item;
+
+      // 1. Check if record already exists
+   // 1. Check if record already exists
+    const { data: filteredRecords, errors: queryErrors } =
+      await client.models.InputTable.listInputTableBySiteIdAndRowdate({
+        siteId: siteId,
+        rowdate: { eq: rowdate }  // This must be a filter object
+      });
+
+        // Then filter by iccid in memory
+        const existingRecords = filteredRecords.filter(record => record.iccid === iccid);
+
+        
       if (queryErrors) {
         console.error("Query error:", queryErrors);
         throw queryErrors;
       }
-  
+
       const existingRecord = existingRecords[0];
       let result;
-  
-      // 2. Prepare the data with proper JSON serialization
-      const newData = data.map(entry => ({
-        iccid: entry.iccid,
-        inputValues: entry.inputValues,
-        siteId // Include siteId in each entry
-      }));
-  
-      // Ensure data is properly serialized
-      const serializedData = JSON.stringify(newData);
-  
+
+    
+      // Convert inputValues to JSON string to ensure proper format
+      const inputValuesJson = JSON.stringify(inputValues);
+
       if (existingRecord) {
-        // 3A. Merge with existing data
-        let existingData: any[] = [];
-        try {
-          existingData = typeof existingRecord.data === 'string' 
-            ? JSON.parse(existingRecord.data) 
-            : existingRecord.data;
-        } catch (e) {
-          console.error("Failed to parse existing data:", existingRecord.data);
-          throw new Error("Invalid existing data format");
-        }
-  
-        if (!Array.isArray(existingData)) {
-          throw new Error("Existing data is not an array");
-        }
-  
-        // Create a map for efficient merging
-        const newDataMap = new Map(newData.map(item => [item.iccid, item]));
-        const mergedData = existingData.map((item: any) => {
-          if (newDataMap.has(item.iccid)) {
-            // Deep merge inputValues
-            const newItem = newDataMap.get(item.iccid);
-            return {
-              ...item,
-              inputValues: {
-                ...item.inputValues,
-                ...newItem?.inputValues
-              }
-            };
-          }
-          return item;
-        });
-  
-        // Add any completely new entries
-        newDataMap.forEach((value, key) => {
-          if (!existingData.some((item: any) => item.iccid === key)) {
-            mergedData.push(value);
-          }
-        });
-  
-        // Update the record with properly serialized data
-        const { data: updated, errors } = await client.models.InputValueTable.update({
-          id: existingRecord.id,
-          siteId,
-          timestamp: existingRecord.timestamp, // Keep the original timestamp
-          data: JSON.stringify(mergedData) // Explicit serialization
-        });
-  
+        // 2A. Update existing record - safely handle inputValues
+        const existingInputValues = typeof existingRecord.inputValues === 'object' && 
+                                   existingRecord.inputValues !== null &&
+                                   !Array.isArray(existingRecord.inputValues)
+          ? existingRecord.inputValues as Record<string, string>
+          : {};
+
+        // Merge values and convert to JSON string
+        const mergedInputValues = {
+          ...existingInputValues,
+          ...inputValues,
+        };
+
+        const { data: updated, errors } =
+          await client.models.InputTable.update({
+            id: existingRecord.id,
+            siteId,
+            iccid,
+            rowdate,
+            inputValues: JSON.stringify(mergedInputValues), // Convert to JSON string
+          });
+
         if (errors) throw errors;
         result = updated;
       } else {
-        // 3B. Create new record with properly serialized data
-        const { data: created, errors } = await client.models.InputValueTable.create({
-          siteId,
-          timestamp, // Use the provided timestamp for new records
-          data: serializedData // Use the pre-serialized data
-        });
-  
+        // 2B. Create new record - convert inputValues to JSON string
+        const { data: created, errors } =
+          await client.models.InputTable.create({
+            siteId,
+            iccid,
+            rowdate,
+            inputValues: inputValuesJson, // Use JSON string
+          });
+
         if (errors) throw errors;
         result = created;
       }
-  
 
+      results.push(result);
+    }
+
+    return results;
+  } catch (error) {
+    console.error("Operation failed:", {
+      error,
+      input: payload?.[0], // Log first item for debugging
+    });
+    throw error;
+  }
+};
+
+
+//   siteId: string,
+//   iccid?: string,
+//   rowdate?: string, // Optional: delete specific date only
+// ) => {
+//   try {
+//     let filter: any = { siteId: { eq: siteId } };
+    
+//     if (iccid) {
+//       filter.iccid = { eq: iccid };
+//     }
+    
+//     if (rowdate) {
+//       filter.rowdate = { eq: rowdate };
+//     }
+
+//     // 1. Find the records to delete
+//     const { data: existingRecords, errors: queryErrors } =
+//       await client.models.InputTable.list({
+//         filter,
+//       });
+
+//     if (queryErrors) {
+//       console.error("Query error:", queryErrors);
+//       throw new Error("Failed to query records");
+//     }
+
+//     if (existingRecords.length === 0) {
+//       console.warn("No records found for deletion");
+//       return [];
+//     }
+
+//     const deletionResults = [];
+
+//     // 2. Delete all matching records
+//     for (const record of existingRecords) {
+//       const { data: deleted, errors } =
+//         await client.models.InputTable.delete({
+//           id: record.id,
+//         });
       
-      return result;
-  
-    } catch (error) {
-      console.error("Operation failed:", {
-        error,
-        input: {
-          siteId,
-          timestamp: payload.timestamp,
-          dataSample: payload.data?.[0] // Log first item for debugging
-        }
-      });
-      throw error;
-    }
-  };
+//       if (errors) {
+//         console.error("Delete error for record:", record.id, errors);
+//         throw errors;
+//       }
+      
+//       deletionResults.push(deleted);
+//     }
 
-
-
-export const deleteInputValueTable = async (
-    siteId: string,
-    timestamp: string,
-    iccidsToDelete?: string[] // Optional: delete specific ICCIDs only
-  ) => {
-    try {
-      // 1. Find the record to modify
-      const { data: existingRecords, errors: queryErrors } = 
-        await client.models.InputValueTable.list({
-          filter: {
-            siteId: { eq: siteId },
-            timestamp: { eq: timestamp }
-          }
-        });
-  
-      if (queryErrors) {
-        console.error("Query error:", queryErrors);
-        throw new Error("Failed to query records");
-      }
-  
-      if (existingRecords.length === 0) {
-        console.warn("No record found for deletion");
-        return null;
-      }
-  
-      const record = existingRecords[0];
-  
-      if (!iccidsToDelete) {
-        // 2A. Delete entire record
-        const { data: deleted, errors } = await client.models.InputValueTable.delete({
-          id: record.id
-        });
-        if (errors) throw errors;
-        return { action: "deleted" };
-      } else {
-        // 2B. Delete specific ICCIDs
-        const currentData = record.data ? 
-          (typeof record.data === 'string' ? 
-            JSON.parse(record.data) : 
-            record.data) : 
-          [];
-  
-        const filteredData = currentData.filter(
-          (item: any) => !iccidsToDelete.includes(item.iccid)
-        );
-  
-        if (filteredData.length === 0) {
-          // Delete if no data left
-          const { data: deleted, errors } = await client.models.InputValueTable.delete({
-            id: record.id
-          });
-          if (errors) throw errors;
-          return { action: "deleted" };
-        } else {
-          // Update with remaining data
-          const { data: updated, errors } = await client.models.InputValueTable.update({
-            id: record.id,
-            siteId,
-            timestamp,
-            data: filteredData
-          });
-          if (errors) throw errors;
-          return { action: "updated", data: filteredData };
-        }
-      }
-    } catch (error) {
-      console.error("Deletion failed:", error);
-      throw error;
-    }
-  };
+//     return deletionResults;
+//   } catch (error) {
+//     console.error("Deletion failed:", error);
+//     throw error;
+//   }
+// };

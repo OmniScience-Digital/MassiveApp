@@ -9,22 +9,19 @@ import { ReportItem } from "@/types/schema";
 export const runStockpileReport = async (
   sitedata: ReportItem,
   params: { startTime: string; endTime: string },
-  reqstockpileNumber:string
+  reqstockpileNumber: string,
 ) => {
   try {
     const { startTime, endTime } = params;
 
-    
-    if(reqstockpileNumber.trim()==='')
-    {
-      reqstockpileNumber='';
+    if (reqstockpileNumber.trim() === "") {
+      reqstockpileNumber = "";
     }
-    
-    
+
     const response = await fetch(`${constants.securebaseUrltest}/stockpile`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         sitedata: sitedata,
@@ -40,7 +37,6 @@ export const runStockpileReport = async (
 
     const data = await response.json();
     return data;
-
   } catch (error) {
     console.error("Error:", error);
     throw error;

@@ -37,26 +37,36 @@ const Timewidget = ({ siteTimes_input, fetchData }: TimewidgetProps) => {
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState("");
 
-  useEffect(() => { }, [startDay]);
+  useEffect(() => {}, [startDay]);
 
   // State for time ranges
   const [timeRanges, setTimeRanges] = useState({
     day: [siteTimes_input.dayStart, siteTimes_input.dayStop],
     night: [siteTimes_input.nightStart, siteTimes_input.nightStop],
-    extraShift: [siteTimes_input.extraShiftStart, siteTimes_input.extraShiftStop],
+    extraShift: [
+      siteTimes_input.extraShiftStart,
+      siteTimes_input.extraShiftStop,
+    ],
   });
 
   // Check if toggle should be shown
-  const show24HourToggle = siteTimes_input.nightStart !== siteTimes_input.nightStop;
+  const show24HourToggle =
+    siteTimes_input.nightStart !== siteTimes_input.nightStop;
 
   // State for switch
-  const [is24Hour, setIs24Hour] = useState(siteTimes_input.twentyFourhourShift || false);
+  const [is24Hour, setIs24Hour] = useState(
+    siteTimes_input.twentyFourhourShift || false,
+  );
 
   // Track previous values to detect changes
   const [previousTimeRanges, setPreviousTimeRanges] = useState(timeRanges);
 
   // Handle time range updates
-  const handleTimeRangeChange = (shiftLabel: string, newStart: string, newStop: string) => {
+  const handleTimeRangeChange = (
+    shiftLabel: string,
+    newStart: string,
+    newStop: string,
+  ) => {
     setTimeRanges((prevState) => {
       const updatedRanges = { ...prevState };
       if (shiftLabel === "Day Shift") {
@@ -79,7 +89,6 @@ const Timewidget = ({ siteTimes_input, fetchData }: TimewidgetProps) => {
 
       if (siteTimes_input.monthstart !== startDay) {
         updatedDetected = true;
-
       }
 
       if (
@@ -87,27 +96,21 @@ const Timewidget = ({ siteTimes_input, fetchData }: TimewidgetProps) => {
         timeRanges.day[1] !== previousTimeRanges.day[1]
       ) {
         updatedDetected = true;
-
       }
       if (
         timeRanges.night[0] !== previousTimeRanges.night[0] ||
         timeRanges.night[1] !== previousTimeRanges.night[1]
       ) {
         updatedDetected = true;
-
       }
       if (
         timeRanges.extraShift[0] !== previousTimeRanges.extraShift[0] ||
         timeRanges.extraShift[1] !== previousTimeRanges.extraShift[1]
       ) {
         updatedDetected = true;
-
       }
 
-
-      if (
-        siteTimes_input.twentyFourhourShift !== is24Hour
-      ) {
+      if (siteTimes_input.twentyFourhourShift !== is24Hour) {
         updatedDetected = true;
       }
 
@@ -151,9 +154,21 @@ const Timewidget = ({ siteTimes_input, fetchData }: TimewidgetProps) => {
   };
 
   const timeRangesData = [
-    { label: "Day Shift", start: siteTimes_input.dayStart, stop: siteTimes_input.dayStop },
-    { label: "Night Shift", start: siteTimes_input.nightStart, stop: siteTimes_input.nightStop },
-    { label: "Extra Shift", start: siteTimes_input.extraShiftStart, stop: siteTimes_input.extraShiftStop },
+    {
+      label: "Day Shift",
+      start: siteTimes_input.dayStart,
+      stop: siteTimes_input.dayStop,
+    },
+    {
+      label: "Night Shift",
+      start: siteTimes_input.nightStart,
+      stop: siteTimes_input.nightStop,
+    },
+    {
+      label: "Extra Shift",
+      start: siteTimes_input.extraShiftStart,
+      stop: siteTimes_input.extraShiftStop,
+    },
   ];
 
   return (
@@ -172,7 +187,6 @@ const Timewidget = ({ siteTimes_input, fetchData }: TimewidgetProps) => {
                 checked={is24Hour}
                 onCheckedChange={(checked) => {
                   setIs24Hour(checked);
-                  
                 }}
               />
             </div>
@@ -188,7 +202,9 @@ const Timewidget = ({ siteTimes_input, fetchData }: TimewidgetProps) => {
           label={`${shift.label} Range`}
           Start={shift.start}
           Stop={shift.stop}
-          onChange={(start, stop) => handleTimeRangeChange(shift.label, start, stop)}
+          onChange={(start, stop) =>
+            handleTimeRangeChange(shift.label, start, stop)
+          }
         />
       ))}
 
@@ -203,7 +219,13 @@ const Timewidget = ({ siteTimes_input, fetchData }: TimewidgetProps) => {
         </Button>
       )}
 
-      {show && <ResponseModal successful={successful} message={message} setShow={setShow} />}
+      {show && (
+        <ResponseModal
+          successful={successful}
+          message={message}
+          setShow={setShow}
+        />
+      )}
     </div>
   );
 };

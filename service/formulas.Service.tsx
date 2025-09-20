@@ -5,8 +5,8 @@ export const createFormula = async (
   formulaobj: {
     formulaname: string;
     formula: string;
-    virtualformula:boolean;
-  }
+    virtualformula: boolean;
+  },
 ) => {
   try {
     // Step 1: Fetch the existing site data
@@ -36,7 +36,7 @@ export const createFormula = async (
     }
 
     const exists = parsedSite.formulas.find(
-      (f: any) => f.formulaname === formulaobj.formulaname
+      (f: any) => f.formulaname === formulaobj.formulaname,
     );
 
     if (!exists) {
@@ -63,70 +63,58 @@ export const createFormula = async (
   }
 };
 
+export const deleteFormula = async (id: string, formulaname: string) => {
+  try {
+    // Step 1: Fetch the existing site data
+    const { data: site, errors } = await client.models.Sites.get({ id });
 
-
-export const deleteFormula = async (
-    id: string,
-    formulaname: string,
-) => {
-    try {
-
-        // Step 1: Fetch the existing site data
-        const { data: site, errors } = await client.models.Sites.get({ id });
-
-
-        if (errors) {
-            console.error("Error fetching site:", errors);
-            return null;
-        }
-
-        if (!site) {
-            console.error("Site not found");
-            return null;
-        }
-
-        // Step 2: Parse `site` if it's a string
-        let parsedSite;
-        if (typeof site.site === "string") {
-            parsedSite = JSON.parse(site.site);
-        } else {
-            parsedSite = site.site;
-        }
-
-
-
-        const exists = parsedSite.formulas.find((f: any) => f.formulaname === formulaname);
-
-
-        if (exists) {
-            console.log("Deleting formula:", exists);
-            parsedSite.formulas = parsedSite.formulas.filter((f: any) => f.formulaname !== formulaname);
-        } else {
-            console.log("Formula not found:", formulaname);
-        }
-
-
-        // Step 4: Save the updated site data back to the database
-        const updateResponse = await client.models.Sites.update({
-            id,
-            site: JSON.stringify(parsedSite), // Convert back to string if necessary
-        });
-
-        if (updateResponse.errors) {
-            console.error("Error updating site:", updateResponse.errors);
-            return null;
-        }
-
-
-
-        return parsedSite;
-
-
-    } catch (error) {
-        console.log('Error creating a formula :', error)
-
+    if (errors) {
+      console.error("Error fetching site:", errors);
+      return null;
     }
-}
+
+    if (!site) {
+      console.error("Site not found");
+      return null;
+    }
+
+    // Step 2: Parse `site` if it's a string
+    let parsedSite;
+    if (typeof site.site === "string") {
+      parsedSite = JSON.parse(site.site);
+    } else {
+      parsedSite = site.site;
+    }
+
+    const exists = parsedSite.formulas.find(
+      (f: any) => f.formulaname === formulaname,
+    );
+
+    if (exists) {
+      console.log("Deleting formula:", exists);
+      parsedSite.formulas = parsedSite.formulas.filter(
+        (f: any) => f.formulaname !== formulaname,
+      );
+    } else {
+      console.log("Formula not found:", formulaname);
+    }
+
+    // Step 4: Save the updated site data back to the database
+    const updateResponse = await client.models.Sites.update({
+      id,
+      site: JSON.stringify(parsedSite), // Convert back to string if necessary
+    });
+
+    if (updateResponse.errors) {
+      console.error("Error updating site:", updateResponse.errors);
+      return null;
+    }
+
+    return parsedSite;
+  } catch (error) {
+    console.log("Error creating a formula :", error);
+  }
+};
 
 export const updateFormula = async (
   id: string,
@@ -134,11 +122,9 @@ export const updateFormula = async (
     formulaname: string;
     formula: string;
     virtualformula: boolean;
-  }
+  },
 ) => {
   try {
-
-  
     // [1] Fetch site data
     const { data: site, errors } = await client.models.Sites.get({ id });
     if (errors || !site) {
@@ -147,9 +133,8 @@ export const updateFormula = async (
     }
 
     // [2] Parse site data
-    const parsedSite = typeof site.site === "string" 
-      ? JSON.parse(site.site) 
-      : site.site;
+    const parsedSite =
+      typeof site.site === "string" ? JSON.parse(site.site) : site.site;
 
     // [3] Initialize formulas array
     if (!Array.isArray(parsedSite.formulas)) {
@@ -158,14 +143,14 @@ export const updateFormula = async (
 
     // [4] Find and FULLY update formula
     const index = parsedSite.formulas.findIndex(
-      (f:any) => f.formulaname === formulaobj.formulaname
+      (f: any) => f.formulaname === formulaobj.formulaname,
     );
 
     if (index !== -1) {
       // Update ALL properties including virtualformula
       parsedSite.formulas[index] = {
         ...parsedSite.formulas[index], // Keep existing fields
-        ...formulaobj                  // Override with new values
+        ...formulaobj, // Override with new values
       };
     } else {
       parsedSite.formulas.push(formulaobj);

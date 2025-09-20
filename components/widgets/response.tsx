@@ -7,7 +7,11 @@ interface ResponseModalProps {
   setShow: (value: boolean) => void;
 }
 
-const ResponseModal = ({ successful, message, setShow }: ResponseModalProps) => {
+const ResponseModal = ({
+  successful,
+  message,
+  setShow,
+}: ResponseModalProps) => {
   const closeModal = () => {
     setShow(false);
   };

@@ -38,7 +38,9 @@ export function DataTable<TData extends object>({
   searchColumn = "sitename",
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
   const [isMounted, setIsMounted] = React.useState(false);
 
   const [pagination, setPagination] = React.useState({
@@ -97,16 +99,17 @@ export function DataTable<TData extends object>({
     }
   }, [columnFilters, table, isMounted]);
 
-  const searchValue = (table.getColumn(searchColumn)?.getFilterValue() as string) ?? "";
+  const searchValue =
+    (table.getColumn(searchColumn)?.getFilterValue() as string) ?? "";
 
   if (!isMounted) {
     return (
       <div className="bg-background text-foreground p-4 rounded-lg shadow-md">
         <h2 className="text-xl font-bold mb-4">{title}</h2>
         <div className="flex items-center py-4">
-          <Input 
+          <Input
             placeholder={`Search ${searchColumn}`}
-            className="max-w-sm" 
+            className="max-w-sm"
             value=""
             onChange={() => {}}
           />
@@ -128,7 +131,10 @@ export function DataTable<TData extends object>({
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   Loading...
                 </TableCell>
               </TableRow>
@@ -198,7 +204,10 @@ export function DataTable<TData extends object>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   No results.
                 </TableCell>
               </TableRow>
@@ -209,7 +218,8 @@ export function DataTable<TData extends object>({
 
       <div className="flex items-center justify-between px-2 py-4">
         <div className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          Page {table.getState().pagination.pageIndex + 1} of{" "}
+          {table.getPageCount()}
         </div>
         <div className="flex items-center space-x-2">
           <Button

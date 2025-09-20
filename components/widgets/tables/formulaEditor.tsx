@@ -1,9 +1,31 @@
 import { useState } from "react";
-import { useParams } from 'next/navigation';
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calculator, Plus, Minus, X, Divide, Parentheses, Trash2, Save, Delete } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Calculator,
+  Plus,
+  Minus,
+  X,
+  Divide,
+  Parentheses,
+  Trash2,
+  Save,
+  Delete,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReportItem } from "@/types/schema";
 import { createFormula, updateFormula } from "@/service/formulas.Service";
@@ -16,23 +38,30 @@ interface FormulaEditorProps {
   onDelete: (formula: Pick<ReportItem["formulas"][0], "formulaname">) => void;
 }
 
-export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDelete }: FormulaEditorProps) => {
+export const FormulaEditor = ({
+  scales,
+  formulas: initialFormulas,
+  onSave,
+  onDelete,
+}: FormulaEditorProps) => {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
 
-  const [editingFormula, setEditingFormula] = useState<ReportItem["formulas"][0] | null>(null);
+  const [editingFormula, setEditingFormula] = useState<
+    ReportItem["formulas"][0] | null
+  >(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [customScale, setCustomScale] = useState('');
-  const [formulas, setFormulas] = useState<ReportItem["formulas"]>(initialFormulas)
+  const [customScale, setCustomScale] = useState("");
+  const [formulas, setFormulas] =
+    useState<ReportItem["formulas"]>(initialFormulas);
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
 
   const handleEdit = (formula: ReportItem["formulas"][0]) => {
     setEditingFormula(formula);
     setIsDialogOpen(true);
   };
-
 
   //make a virtual formula
   const handleScaleToggle = async (formula: ReportItem["formulas"][0]) => {
@@ -42,30 +71,30 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
       const updatedStatus = !currentStatus;
 
       // Optimistically update local state first
-      setFormulas(prevFormulas =>
-        prevFormulas.map(f =>
+      setFormulas((prevFormulas) =>
+        prevFormulas.map((f) =>
           f.formulaname === formula.formulaname
             ? { ...f, virtualformula: updatedStatus }
-            : f
-        )
+            : f,
+        ),
       );
 
       // Update in database
       const updatedFormula = {
         ...formula,
-        virtualformula: updatedStatus
+        virtualformula: updatedStatus,
       };
 
       const newformula = await updateFormula(id as string, updatedFormula);
 
       if (!newformula) {
         // Revert if API fails
-        setFormulas(prevFormulas =>
-          prevFormulas.map(f =>
-            f.formulaname === formula.formulaname ? formula : f
-          )
+        setFormulas((prevFormulas) =>
+          prevFormulas.map((f) =>
+            f.formulaname === formula.formulaname ? formula : f,
+          ),
         );
-        throw new Error('Update failed');
+        throw new Error("Update failed");
       }
 
       // Update parent component if needed
@@ -73,23 +102,22 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
 
       setSuccessful(true);
       setMessage(
-        `Formula marked as ${updatedStatus ? 'virtual' : 'regular'} successfully`
+        `Formula marked as ${updatedStatus ? "virtual" : "regular"} successfully`,
       );
       setShow(true);
     } catch (error) {
-      console.error('Error toggling virtual status:', error);
+      console.error("Error toggling virtual status:", error);
       setSuccessful(false);
-      setMessage('Failed to update formula status');
+      setMessage("Failed to update formula status");
       setShow(true);
     }
   };
-
 
   const handleCreate = () => {
     setEditingFormula({
       formulaname: "",
       formula: "",
-      virtualformula: false
+      virtualformula: false,
     });
     setIsDialogOpen(true);
   };
@@ -99,17 +127,23 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
       if (!editingFormula) return;
 
       // Optimistically update local state
-      setFormulas(prev => {
-        const exists = prev.some(f => f.formulaname === editingFormula.formulaname);
+      setFormulas((prev) => {
+        const exists = prev.some(
+          (f) => f.formulaname === editingFormula.formulaname,
+        );
         return exists
-          ? prev.map(f => f.formulaname === editingFormula.formulaname ? editingFormula : f)
+          ? prev.map((f) =>
+              f.formulaname === editingFormula.formulaname ? editingFormula : f,
+            )
           : [...prev, editingFormula];
       });
 
       onSave(editingFormula);
       setIsDialogOpen(false);
 
-      const exists = formulas.find((f: any) => f.formulaname === editingFormula.formulaname);
+      const exists = formulas.find(
+        (f: any) => f.formulaname === editingFormula.formulaname,
+      );
 
       let newformula;
       if (!exists) {
@@ -117,11 +151,11 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
 
         if (newformula) {
           setSuccessful(true);
-          setMessage('Formula created successfully');
+          setMessage("Formula created successfully");
           setShow(true);
         } else if (newformula === null) {
           setSuccessful(false);
-          setMessage('Formula with this name already exists');
+          setMessage("Formula with this name already exists");
           setShow(true);
         }
       } else {
@@ -129,16 +163,16 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
 
         if (newformula) {
           setSuccessful(true);
-          setMessage('Formula updated successfully');
+          setMessage("Formula updated successfully");
           setShow(true);
         }
       }
     } catch (error) {
-      console.log('Error creating formula ', error);
+      console.log("Error creating formula ", error);
       // Revert state on error
       setFormulas(initialFormulas);
       setSuccessful(false);
-      setMessage('Failed to update formula');
+      setMessage("Failed to update formula");
       setShow(true);
     }
   };
@@ -147,30 +181,34 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
     if (!editingFormula?.formulaname) return;
 
     // Optimistically update local state
-    setFormulas(prev =>
-      prev.filter(f => f.formulaname !== editingFormula.formulaname)
+    setFormulas((prev) =>
+      prev.filter((f) => f.formulaname !== editingFormula.formulaname),
     );
     onDelete({ formulaname: editingFormula.formulaname });
     setIsDialogOpen(false);
   };
 
   const addToFormula = (value: string) => {
-    setEditingFormula(prev => prev ? {
-      ...prev,
-      formula: `${prev.formula} ${value}`
-    } : null);
+    setEditingFormula((prev) =>
+      prev
+        ? {
+            ...prev,
+            formula: `${prev.formula} ${value}`,
+          }
+        : null,
+    );
   };
 
   const addCustomScale = () => {
     const scaleToAdd = customScale.trim();
     if (scaleToAdd) {
       addToFormula(scaleToAdd);
-      setCustomScale('');
+      setCustomScale("");
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       addCustomScale();
     }
   };
@@ -196,10 +234,11 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
         <TableBody>
           {formulas.map((formula) => (
             <TableRow key={formula.formulaname}>
-              <TableCell className="font-medium">{formula.formulaname}</TableCell>
+              <TableCell className="font-medium">
+                {formula.formulaname}
+              </TableCell>
               <TableCell className="font-mono">{formula.formula}</TableCell>
               <TableCell className="font-mono">
-
                 <Checkbox
                   id={`formula-${formula.formulaname}`}
                   checked={formula.virtualformula}
@@ -231,13 +270,17 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Formula Name</label>
+              <label className="block text-sm font-medium mb-1">
+                Formula Name
+              </label>
               <input
                 type="text"
                 value={editingFormula?.formulaname || ""}
-                onChange={(e) => setEditingFormula(prev =>
-                  prev ? { ...prev, formulaname: e.target.value } : null
-                )}
+                onChange={(e) =>
+                  setEditingFormula((prev) =>
+                    prev ? { ...prev, formulaname: e.target.value } : null,
+                  )
+                }
                 className="w-full p-2 border rounded"
               />
             </div>
@@ -245,7 +288,11 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
             <div>
               <label className="block text-sm font-medium mb-1">Formula</label>
               <div className="p-3 border rounded bg-gray-50 min-h-12 font-mono mb-2">
-                {editingFormula?.formula || <span className="text-gray-400">Formula will appear here</span>}
+                {editingFormula?.formula || (
+                  <span className="text-gray-400">
+                    Formula will appear here
+                  </span>
+                )}
               </div>
 
               <div className="flex gap-2 mb-2">
@@ -279,70 +326,86 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
               </div>
 
               <div className="grid grid-cols-4 gap-2">
-                <Button variant="outline" onClick={() => addToFormula('0')}>
+                <Button variant="outline" onClick={() => addToFormula("0")}>
                   0
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('1')}>
+                <Button variant="outline" onClick={() => addToFormula("1")}>
                   1
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('2')}>
+                <Button variant="outline" onClick={() => addToFormula("2")}>
                   2
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('3')}>
+                <Button variant="outline" onClick={() => addToFormula("3")}>
                   3
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('4')}>
+                <Button variant="outline" onClick={() => addToFormula("4")}>
                   4
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('5')}>
+                <Button variant="outline" onClick={() => addToFormula("5")}>
                   5
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('6')}>
+                <Button variant="outline" onClick={() => addToFormula("6")}>
                   6
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('7')}>
+                <Button variant="outline" onClick={() => addToFormula("7")}>
                   7
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('8')}>
+                <Button variant="outline" onClick={() => addToFormula("8")}>
                   8
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('9')}>
+                <Button variant="outline" onClick={() => addToFormula("9")}>
                   9
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('100')}>
+                <Button variant="outline" onClick={() => addToFormula("100")}>
                   100
                 </Button>
-                 <Button variant="outline" onClick={() => addToFormula('.')}>
+                <Button variant="outline" onClick={() => addToFormula(".")}>
                   .
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('+')}>
+                <Button variant="outline" onClick={() => addToFormula("+")}>
                   <Plus className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('-')}>
+                <Button variant="outline" onClick={() => addToFormula("-")}>
                   <Minus className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('*')}>
+                <Button variant="outline" onClick={() => addToFormula("*")}>
                   <X className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('/')}>
+                <Button variant="outline" onClick={() => addToFormula("/")}>
                   <Divide className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('(')}>
+                <Button variant="outline" onClick={() => addToFormula("(")}>
                   <Parentheses className="h-4 w-4" /> (
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('((')}>
+                <Button variant="outline" onClick={() => addToFormula("((")}>
                   <Parentheses className="h-4 w-4" /> ((
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula(')')}>
+                <Button variant="outline" onClick={() => addToFormula(")")}>
                   <Parentheses className="h-4 w-4" /> )
                 </Button>
-                <Button variant="outline" onClick={() => addToFormula('))')}>
+                <Button variant="outline" onClick={() => addToFormula("))")}>
                   <Parentheses className="h-4 w-4" /> ))
                 </Button>
-                <Button variant="outline" onClick={() => setEditingFormula(prev => prev ? { ...prev, formula: "" } : null)}>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setEditingFormula((prev) =>
+                      prev ? { ...prev, formula: "" } : null,
+                    )
+                  }
+                >
                   Clear
                 </Button>
-                <Button variant="outline" onClick={() => setEditingFormula(prev => prev ? { ...prev, formula: prev.formula.slice(0, -1) } : null)}>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setEditingFormula((prev) =>
+                      prev
+                        ? { ...prev, formula: prev.formula.slice(0, -1) }
+                        : null,
+                    )
+                  }
+                >
                   <Delete className="h-4 w-4" /> Back
                 </Button>
               </div>
@@ -355,7 +418,10 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
                 </Button>
               )}
               <div className="space-x-2">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleSave}>
@@ -366,7 +432,13 @@ export const FormulaEditor = ({ scales, formulas: initialFormulas, onSave, onDel
           </div>
         </DialogContent>
       </Dialog>
-      {show && <ResponseModal successful={successful} message={message} setShow={setShow} />}
+      {show && (
+        <ResponseModal
+          successful={successful}
+          message={message}
+          setShow={setShow}
+        />
+      )}
     </div>
   );
 };

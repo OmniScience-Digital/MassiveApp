@@ -10,11 +10,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function DialogDashboard({ open, setOpen, name, setName, addDashboard }: { 
-  open: boolean; 
-  setOpen: (open: boolean) => void; 
-  name: string; 
-  setName: (name: string) => void; 
+export function DialogDashboard({
+  open,
+  setOpen,
+  name,
+  setName,
+  addDashboard,
+}: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  name: string;
+  setName: (name: string) => void;
   addDashboard: () => void;
 }) {
   return (
@@ -40,8 +46,6 @@ export function DialogDashboard({ open, setOpen, name, setName, addDashboard }: 
               autoComplete="off"
             />
           </div>
-
-  
         </div>
         <DialogFooter>
           <Button onClick={addDashboard}>Create Dashboard</Button>

@@ -7,17 +7,19 @@ import { NextResponse } from "next/server";
 //securebaseUrlprod
 //securebaseUrltest
 
-
 export async function POST() {
   try {
-    console.log('Stop simulation called');
+    console.log("Stop simulation called");
 
     // Force no caching
-    const response = await fetch(`${constants.securebaseUrltest}/stopsimulator`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store', // always hit backend
-    });
+    const response = await fetch(
+      `${constants.securebaseUrltest}/stopsimulator`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store", // always hit backend
+      },
+    );
 
     // Detect backend failure
     if (!response.ok) throw new Error(`Backend returned ${response.status}`);
@@ -25,21 +27,26 @@ export async function POST() {
     const externalResponse = await response.json();
 
     // If backend returns nothing
-    if (!externalResponse) throw new Error('Backend returned no data');
+    if (!externalResponse) throw new Error("Backend returned no data");
 
-    return NextResponse.json({
-      success: true,
-      data: externalResponse
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        success: true,
+        data: externalResponse,
+      },
+      { status: 200 },
+    );
   } catch (error) {
-    console.error('Error stopping simulator:', error);
+    console.error("Error stopping simulator:", error);
 
     // Return safe default
-    return NextResponse.json({
-      success: false,
-      data: null,
-      error: (error as Error).message || 'Backend unreachable'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: (error as Error).message || "Backend unreachable",
+      },
+      { status: 500 },
+    );
   }
 }

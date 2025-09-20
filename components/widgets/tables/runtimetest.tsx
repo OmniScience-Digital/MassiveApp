@@ -63,15 +63,12 @@
 //   return dates;
 // }
 
-
-
 // const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
 //   const params = useParams();
 //   const id = decodeURIComponent(params.id as string);
 //   const dashboardname = decodeURIComponent(params.name as string).toUpperCase();
 
 //   let queryDates = getDatesBetween(daterange.startDate, daterange.endDate);
-
 
 //   const allIccids = Array.from(new Set(
 //     iccidRuntimes.flatMap(day => day.scales.map(scale => scale.iccid))
@@ -113,17 +110,22 @@
 //   // Function to normalize ICCID
 //   const normalize = (id: string): string => id.replace(/[-_]/g, '');
 
-  
 //   // Fetch site table values
 //   const getSiteTableValues = async (siteId: string) => {
 //     try {
 
-//       const { data: inputvalues, errors } = await client.models.InputValueTable.listBySiteAndDate({
-//         siteId: siteId,
-//         timestamp: {
-//           between: [daterange.startDate, daterange.endDate]
-//         }
+//       // const { data: inputvalues, errors } = await client.models.InputValueTable.listBySiteAndDate({
+//       //   siteId: siteId,
+//       //   timestamp: {
+//       //     between: [daterange.startDate, daterange.endDate]
+//       //   }
+//       // });
+
+//       const { data: inputvalues, errors } = await client.models.InputValueTable.list({
+//         filter: { siteId: { eq: siteId } }
 //       });
+
+//       console.log(inputvalues);
 
 //       if (errors) {
 //         console.error("Error fetching site:", errors);
@@ -157,62 +159,157 @@
 //     }
 //   };
 
-//   // Fetch input values and update state
-//   const fetchInputValues = useCallback(async () => {
+//   // Fetch purple figures values
+//   const getPurpleTableValues = async (siteId: string) => {
 //     try {
 
-//       const iccidInputValues = await getSiteTableValues(id);
+//       const { data: purplevalues, errors } =
 
-//       // if (!iccidInputValues || iccidInputValues.length === 0) {
-//       //   setMessage("No input values found for the site.");
-//       //   setShow(true);
-//       //   setSuccessful(false);
-//       //   return;
-//       // }
+//         await client.models.Purplefigures.listPurplefiguresBySiteIdAndDate({
+//           siteId: siteId,
+//           date: { between: [daterange.startDate, daterange.endDate] }
+//         });
 
-//       const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
+//       if (errors) {
+//         console.error("Error fetching purple figures:", errors);
+//         return {};
+//       }
 
-//       iccidInputValues.forEach((entry: any) => {
-//         entry.data.forEach((item: any) => {
-//           const iccid = item.iccid;
-//           if (!loadedInputValues[iccid]) {
-//             loadedInputValues[iccid] = {};
+//       const processedData: Record<string, Record<string, Record<string, number>>> = {};
+
+//       purplevalues.forEach((entry: any) => {
+//         const iccid = entry.iccid;
+//         const date = entry.date;
+
+//         if (!processedData[iccid]) {
+//           processedData[iccid] = {};
+//         }
+
+//         if (!processedData[iccid][date]) {
+//           processedData[iccid][date] = {};
+//         }
+
+//         // Parse the purpleValues JSON string first
+//         let parsedPurpleValues: Record<string, any> = {};
+
+//         try {
+//           if (typeof entry.purpleValues === 'string') {
+//             parsedPurpleValues = JSON.parse(entry.purpleValues);
+//           } else if (typeof entry.purpleValues === 'object') {
+//             parsedPurpleValues = entry.purpleValues;
+//           }
+//         } catch (parseError) {
+//           console.error("Error parsing purpleValues JSON:", parseError, "for entry:", entry);
+//           parsedPurpleValues = {};
+//         }
+
+//         // Process the parsed purpleValues
+//         Object.entries(parsedPurpleValues).forEach(([hour, value]) => {
+
+//           let numericValue: number;
+
+//           if (typeof value === 'string') {
+//             numericValue = parseFloat(value) || 0;
+//           } else if (typeof value === 'number') {
+//             numericValue = value;
+//           } else {
+//             numericValue = 0;
 //           }
 
-//           Object.entries(item.inputValues).forEach(([date, hourValues]) => {
-//             if (!loadedInputValues[iccid][date]) {
-//               loadedInputValues[iccid][date] = {};
-//             }
-
-//             Object.entries(hourValues as Record<string, string>).forEach(([hour, value]) => {
-//               if (!loadedInputValues[iccid][date][hour] || loadedInputValues[iccid][date][hour] === "") {
-//                 loadedInputValues[iccid][date][hour] = value;
-//               }
-//             });
-//           });
+//           processedData[iccid][date][hour] = numericValue;
 //         });
 //       });
 
-//       // Update allInputValues with fetched data
+//       return processedData;
+//     } catch (error) {
+//       console.error("Error in getPurpleTableValues:", error);
+//       return {};
+//     }
+//   };
+
+//   // Fetch input values and purple values
+//   const fetchInputValues = useCallback(async () => {
+//     try {
+//       const [iccidInputValues, iccidPurpleValues] = await Promise.all([
+//         getSiteTableValues(id),
+//         getPurpleTableValues(id)
+//       ]);
+
+//       const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
+//       const loadedPurpleValues: Record<string, Record<string, Record<string, number>>> = iccidPurpleValues;
+
+//       // Process input values
+//       iccidInputValues.forEach((entry: any) => {
+//         // Handle data JSON field
+//         if (entry.data && Array.isArray(entry.data)) {
+//           entry.data.forEach((item: any) => {
+//             const iccid = item.iccid;
+//             if (!loadedInputValues[iccid]) {
+//               loadedInputValues[iccid] = {};
+//             }
+
+//             if (item.inputValues && typeof item.inputValues === 'object') {
+//               Object.entries(item.inputValues).forEach(([date, hourValues]) => {
+//                 if (!loadedInputValues[iccid][date]) {
+//                   loadedInputValues[iccid][date] = {};
+//                 }
+
+//                 if (hourValues && typeof hourValues === 'object') {
+//                   Object.entries(hourValues as Record<string, string>).forEach(([hour, value]) => {
+//                     if (!loadedInputValues[iccid][date][hour] || loadedInputValues[iccid][date][hour] === "") {
+//                       loadedInputValues[iccid][date][hour] = value;
+//                     }
+//                   });
+//                 }
+//               });
+//             }
+//           });
+//         }
+//       });
+
+//       // Update states
 //       setAllInputValues(prev => ({
 //         ...prev,
 //         ...loadedInputValues,
 //       }));
 
-//       // Update inputValues for the current ICCID
+//       setAllCalculatedValues(prev => ({
+//         ...prev,
+//         ...loadedPurpleValues,
+//       }));
+
+//       // Update current ICCID values
 //       const normalizedCurrent = normalize(currentIccid);
-//       const matchedKey = Object.keys(loadedInputValues).find(
+//       const matchedInputKey = Object.keys(loadedInputValues).find(
 //         (key) => normalize(key) === normalizedCurrent
 //       );
 
-//       if (matchedKey && loadedInputValues[matchedKey]) {
-//         setInputValues(loadedInputValues[matchedKey]);
+//       const matchedPurpleKey = Object.keys(loadedPurpleValues).find(
+//         (key) => normalize(key) === normalizedCurrent
+//       );
+
+//       if (matchedInputKey) {
+//         setInputValues(loadedInputValues[matchedInputKey] || {});
 //       } else {
 //         setInputValues({});
 //       }
+
+//       if (matchedPurpleKey) {
+//         setCalculatedValues(loadedPurpleValues[matchedPurpleKey] || {});
+
+//       } else {
+//         setCalculatedValues({});
+
+//       }
+
+//       // Enable save button if purple values exist
+//       if (Object.keys(loadedPurpleValues).length > 0) {
+//         setHasCalculated(true);
+//       }
+
 //     } catch (error) {
 //       console.error("Error in fetchInputValues:", error);
-//       setMessage(`Failed to fetch input values: ${error}`);
+//       setMessage(`Failed to fetch values: ${error}`);
 //       setShow(true);
 //       setSuccessful(false);
 //     }
@@ -226,24 +323,32 @@
 //   // Update inputValues and calculatedValues when currentIccid changes
 //   useEffect(() => {
 //     const normalizedCurrent = normalize(currentIccid);
-//     const matchedKey = Object.keys(allInputValues).find(
+//     const matchedInputKey = Object.keys(allInputValues).find(
+//       (key) => normalize(key) === normalizedCurrent
+//     );
+//     const matchedPurpleKey = Object.keys(allCalculatedValues).find(
 //       (key) => normalize(key) === normalizedCurrent
 //     );
 
-//     if (matchedKey && allInputValues[matchedKey]) {
-//       setInputValues(allInputValues[matchedKey]);
+//     if (matchedInputKey) {
+//       setInputValues(allInputValues[matchedInputKey]);
 //     } else {
 //       setInputValues({});
 //     }
 
-//     if (allCalculatedValues[currentIccid]) {
-//       setCalculatedValues(allCalculatedValues[currentIccid]);
+//     if (matchedPurpleKey) {
+//       setCalculatedValues(allCalculatedValues[matchedPurpleKey]);
 //     } else {
 //       setCalculatedValues({});
 //     }
 //   }, [currentIccid, allInputValues, allCalculatedValues]);
 
-
+//   // Auto-show calculated values when purple values are loaded
+//   useEffect(() => {
+//     if (Object.keys(allCalculatedValues).length > 0 && !hasCalculated) {
+//       setHasCalculated(true);
+//     }
+//   }, [allCalculatedValues, hasCalculated]);
 
 //   // Generate date-hour values mapping
 //   const dateToHourValues = iccidRuntimes.reduce((acc, dayData) => {
@@ -535,7 +640,6 @@
 //         }))
 //       };
 
-
 //       setLoadingBtn2(true);
 
 //       // Save both input values and purple figures
@@ -575,10 +679,8 @@
 
 //       setLoadingBtn3(true);
 
-      
-      
 //       // Save both input values and purple figures
-//      await createOrUpdatePurpleDaily(id, purpleFigurePayload);
+//       await createOrUpdatePurpleDaily(id, purpleFigurePayload);
 
 //       setMessage(`Purple figures saved successfully.`);
 //       setShow(true);
@@ -596,7 +698,6 @@
 //     }
 //   };
 
-
 //   const handleRequery = async () => {
 //     try {
 //       setLoadingBtn(true);
@@ -608,7 +709,6 @@
 //         isdateLast = true;
 //       }
 
-
 //       const dateToRequery = selectedDate;
 //       if (!dateToRequery) {
 //         setMessage("Please select a date first");
@@ -617,7 +717,6 @@
 //         setLoadingBtn(false);
 //         return;
 //       }
-
 
 //       // List and delete existing records
 //       const { data: recordsToDelete, errors } = await client.models.AuditorReports.listAuditorReportsBySiteIdAndDate({
@@ -628,7 +727,6 @@
 //       if (errors) {
 //         throw new Error(`Failed to fetch records: ${errors[0]?.message || 'Unknown error'}`);
 //       }
-
 
 //       // Delete all matching records if any exist
 //       if (recordsToDelete?.length) {
@@ -1437,7 +1535,7 @@
 //       {/* Purple Figures Table */}
 //       {viewMode === 'single' ? (
 //         <>
-//           {Object.keys(calculatedValues).length > 0 && (
+//           {(Object.keys(calculatedValues).length > 0 || Object.keys(allCalculatedValues).length > 0) && (
 //             <div className="border rounded-lg overflow-hidden">
 //               <div className="bg-purple-500 font-bold px-4 py-2 text-white text-center">PURPLE FIGURES TABLE</div>
 //               <Table className="min-w-full">
@@ -1508,7 +1606,6 @@
 //       ) : (
 //         <AllIccidsPurpleFigures />
 //       )}
-//       {/* Input Table export section */}
 
 //       <div className="mx-4 mt-4 space-y-4 p-4 border rounded-lg bg-gray-50">
 //         <h3 className="text-lg font-semibold">Export Input Table</h3>

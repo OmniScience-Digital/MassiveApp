@@ -9,9 +9,14 @@ import DynamicTable from "@/components/widgets/tables/dynamictable";
 import InputList from "@/components/widgets/InputList";
 import InputData from "../../../../types/inputdata";
 import { Button } from "@/components/ui/button";
-import { ReportItem } from '@/types/schema';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ReportItem } from "@/types/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Threewaytoggle from "@/components/widgets/threewaytoggle";
 import Loading from "@/components/widgets/loading";
@@ -26,10 +31,10 @@ import { deleteFormula } from "@/service/formulas.Service";
 import Timewidget from "@/components/widgets/Date/sitetime";
 import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
-import { runShiftReport, runtelegramReportwithDate } from "@/app/api/shiftreports.route";
-
-
-
+import {
+  runShiftReport,
+  runtelegramReportwithDate,
+} from "@/app/api/shiftreports.route";
 
 export default function DashboardPage() {
   const params = useParams();
@@ -47,39 +52,36 @@ export default function DashboardPage() {
   const [primaryScales, setPrimaryScales] = useState<string[]>([]);
   const [formulas, setFormulas] = useState<ReportItem["formulas"]>([]);
 
-  const [dynamicinput, setDynamicInputs] = useState<ReportItem["dynamic_inputs"]>([]);
-  const [dynamictables, setDynamictables] = useState<ReportItem["dynamic_tables"]>([]);
-
-
+  const [dynamicinput, setDynamicInputs] = useState<
+    ReportItem["dynamic_inputs"]
+  >([]);
+  const [dynamictables, setDynamictables] = useState<
+    ReportItem["dynamic_tables"]
+  >([]);
 
   const [tableCount, setTableCount] = useState(0);
   const [dbtableCount, setDbTableCount] = useState(0);
   const [inputListCount, setInputListCount] = useState(0);
-  const [selectedValue, setSelectedValue] = useState('');
+  const [selectedValue, setSelectedValue] = useState("");
   const [runreport, setRunreport] = useState(false);
-
 
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
 
-  //run report times 
+  //run report times
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
-
-
   const [loadinbtn, setLoadingBtn] = useState(false);
   const [selectedShift, setSelectedShift] = useState("");
-
 
   const initialInputs: InputData[] = [];
 
   const initialTable: ReportItem["dynamic_tables"] = [
     {
-
-      id: (dbtableCount + 1),
-      tableName: 'Dynamic Table',
+      id: dbtableCount + 1,
+      tableName: "Dynamic Table",
       columns: ["scalename", "iccid"],
       data: [
         { id: 1, "Column 1": "Value 1", "Column 2": "Value 2" },
@@ -87,7 +89,6 @@ export default function DashboardPage() {
       ],
     },
   ];
-
 
   const handleShiftChange = (value: string) => {
     if (value) {
@@ -103,8 +104,6 @@ export default function DashboardPage() {
         id: id,
       });
 
-
-
       if (errors) {
         console.error("Error fetching site:", errors);
         setLoading(false);
@@ -119,7 +118,7 @@ export default function DashboardPage() {
       }
 
       // Check if 'site' contains the correct structure and parse if necessary
-      if (typeof site.site === 'string') {
+      if (typeof site.site === "string") {
         const parsedSite = JSON.parse(site.site);
 
         // Ensure the parsed site matches the ReportItem structure
@@ -134,25 +133,21 @@ export default function DashboardPage() {
           scales: parsedSite.scales || [],
           headers: parsedSite.headers || [],
           formulas: parsedSite.formulas || [],
-          primaryScales: parsedSite.primaryScales || []
+          primaryScales: parsedSite.primaryScales || [],
         };
-
 
         setLoading(false);
         return formattedSite; // Return the formatted site as ReportItem
       }
 
       return null; // Return null if site doesn't match expected structure
-
     } catch (error) {
       console.error("Unexpected error:", error);
       return null; // Ensure function returns a value in case of an error
     }
   };
 
-
   const updateSiteStatusById = async (id: string, newSiteStatus: string) => {
-
     try {
       // First, retrieve the current site details
       const { data: site, errors } = await client.models.Sites.get({ id });
@@ -171,7 +166,7 @@ export default function DashboardPage() {
 
       // Check if 'site' contains the correct structure and parse if necessary
       let parsedSite;
-      if (typeof site.site === 'string') {
+      if (typeof site.site === "string") {
         parsedSite = JSON.parse(site.site);
       } else {
         parsedSite = site.site;
@@ -197,7 +192,6 @@ export default function DashboardPage() {
       }
 
       return updatedSite; // Return the updated site
-
     } catch (error) {
       console.error("Unexpected error:", error);
 
@@ -205,33 +199,25 @@ export default function DashboardPage() {
     }
   };
 
-
   const handleDelete = async (formulaname: string) => {
-
     try {
-
       await deleteFormula(id as string, formulaname as string);
       setSuccessful(true);
-      setMessage('Formula deleted successfully');
+      setMessage("Formula deleted successfully");
       setShow(true);
-
-
     } catch (error) {
-      console.log('Error deleting formula ', error)
+      console.log("Error deleting formula ", error);
       setSuccessful(false);
-      setMessage('Failed to delete formula');
+      setMessage("Failed to delete formula");
       setShow(true);
-
     }
-
   };
 
   //get site by id
   useEffect(() => {
     const fetchData = async () => {
-
       const siteData = await getSiteByid();
-      
+
       if (siteData) {
         setSiteData(siteData); // Set the correctly formatted site data
         setSiteName(siteData.siteConstants.siteName);
@@ -249,10 +235,8 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-
   //upon updates
   const fetchData = async () => {
-
     const siteData = await getSiteByid();
 
     if (siteData) {
@@ -265,17 +249,12 @@ export default function DashboardPage() {
       setPrimaryScales(siteData.primaryScales);
       setDynamicInputs(siteData.dynamic_inputs);
       setDynamictables(siteData.dynamic_tables);
-
-
     }
   };
 
-
   const handleToggleChange = async (newValue: string) => {
-
     setSelectedValue(newValue);
     await updateSiteStatusById(id, newValue);
-
   };
 
   const handleSelectedScales = (selectedScales: string[]) => {
@@ -284,8 +263,6 @@ export default function DashboardPage() {
 
   const logSelectedShift = async (shift: string) => {
     try {
-
-
       if (!shift || shift.trim() === "") {
         setLoadingBtn(false);
         setMessage("Please select shift");
@@ -296,20 +273,21 @@ export default function DashboardPage() {
         return;
       }
 
-      if (shift === "Day Shift") { shift = 'day' }
-      else if (shift === "Night Shift") {
-        shift = 'night';
-
+      if (shift === "Day Shift") {
+        shift = "day";
+      } else if (shift === "Night Shift") {
+        shift = "night";
       }
 
-
-      let shiftData = await runShiftReport(sitedata as ReportItem, shift as string);
+      const shiftData = await runShiftReport(
+        sitedata as ReportItem,
+        shift as string,
+      );
 
       setLoadingBtn(false);
       setMessage("Data fetched successfully");
       setShow(true);
       setSuccessful(true);
-
     } catch (error) {
       setLoadingBtn(false);
       setMessage("Failed to fetch data");
@@ -329,7 +307,6 @@ export default function DashboardPage() {
     return now.toISOString().slice(0, 16);
   };
 
-
   const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newStartTime = e.target.value;
     setStartTime(newStartTime);
@@ -347,19 +324,14 @@ export default function DashboardPage() {
         setMessage("End time must be after start time");
         setShow(true);
         setSuccessful(false);
-
       } else {
         setEndTime(newEndTime);
       }
     }
   };
 
-
-
   const handleQueryReport = async () => {
-
     try {
-
       if (!startTime || !endTime) {
         setMessage("Please select both start and end times");
         setShow(true);
@@ -367,9 +339,7 @@ export default function DashboardPage() {
         return;
       }
 
-
-
-      if (!shift || (shift === "")) {
+      if (!shift || shift === "") {
         setMessage("Please select  shift");
         setShow(true);
         setSuccessful(false);
@@ -377,7 +347,10 @@ export default function DashboardPage() {
       }
 
       const currentDateTime = new Date(getCurrentDateTime());
-      if (new Date(startTime) > currentDateTime || new Date(endTime) > currentDateTime) {
+      if (
+        new Date(startTime) > currentDateTime ||
+        new Date(endTime) > currentDateTime
+      ) {
         setMessage("Cannot select future dates/times");
         setShow(true);
         setSuccessful(false);
@@ -387,14 +360,19 @@ export default function DashboardPage() {
       setLoadingBtn(true);
       console.log("Querying report from", startTime, "to", endTime);
 
-      let shiftData = await runtelegramReportwithDate(sitedata as ReportItem, { startTime: startTime as string, endTime: endTime as string, shift: shift as string });
-
+      const shiftData = await runtelegramReportwithDate(
+        sitedata as ReportItem,
+        {
+          startTime: startTime as string,
+          endTime: endTime as string,
+          shift: shift as string,
+        },
+      );
 
       setLoadingBtn(false);
       setMessage("Data fetched  successfully");
       setShow(true);
       setSuccessful(true);
-
     } catch (error) {
       setLoadingBtn(false);
       setMessage("Failed to fetch data");
@@ -402,32 +380,31 @@ export default function DashboardPage() {
       setSuccessful(false);
       console.log(error);
     }
-
-
   };
-
-
-
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <Navbar />
       <h1 className="text-xl font-normal px-2">{dashboardname} DASHBOARD</h1>
 
-      {loading ? (<Loading />) : (
-
+      {loading ? (
+        <Loading />
+      ) : (
         <main className="flex-1 mt-20">
-
           {sitedata && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2 p-2 bg-background text-foreground">
                 <div className="p-4 shadow-md border shadow-gray-200 rounded-md flex items-center justify-between bg-background text-foreground">
-                  <span className="bg-background text-foreground text-lg" >{siteName}</span>
-                  <Threewaytoggle onChange={handleToggleChange} runValue={selectedValue} />
+                  <span className="bg-background text-foreground text-lg">
+                    {siteName}
+                  </span>
+                  <Threewaytoggle
+                    onChange={handleToggleChange}
+                    runValue={selectedValue}
+                  />
                 </div>
 
                 <div className="p-4 shadow-md border shadow-gray-200 rounded-md bg-background text-foreground items-center flex justify-between">
-
                   {sitedata && (
                     <div className="flex items-center space-x-4">
                       {sitedata.siteTimes.dayStop !== "23:59" && (
@@ -469,8 +446,6 @@ export default function DashboardPage() {
                         </label>
                       )}
                     </div>
-
-
                   )}
                   <Button
                     onClick={() => {
@@ -478,10 +453,13 @@ export default function DashboardPage() {
                       setRunreport(true);
                     }}
                   >
-                    {runreport ? <Loader2 className="animate-spin" /> : <PlayIcon />}
+                    {runreport ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <PlayIcon />
+                    )}
                     Run Report
                   </Button>
-
                 </div>
                 <div className="bg-white dark:bg-gray-900 rounded-lg border p-4 shadow-sm shadow-gray-200">
                   <div className="flex flex-col md:flex-row items-end gap-4 w-full">
@@ -526,7 +504,6 @@ export default function DashboardPage() {
                           </div>
                         </RadioGroup>
                       </div>
-
                     </div>
 
                     {loadinbtn ? (
@@ -544,68 +521,78 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
-
               </div>
 
-
-
               <div className="flex flex-col py-3 px-2">
-
                 <Tabs defaultValue="iot" className="w-[100%]">
                   <TabsList>
                     <TabsTrigger value="iot">IOT</TabsTrigger>
                     <TabsTrigger value="iotnplc">IOT & PLC</TabsTrigger>
                   </TabsList>
                   <TabsContent value="iot">
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 p-2">
-
-
-                      <Timewidget siteTimes_input={sitedata.siteTimes} fetchData={fetchData} />
-                      <SiteConstants siteConstants={sitedata.siteConstants} fetchData={fetchData} />
+                      <Timewidget
+                        siteTimes_input={sitedata.siteTimes}
+                        fetchData={fetchData}
+                      />
+                      <SiteConstants
+                        siteConstants={sitedata.siteConstants}
+                        fetchData={fetchData}
+                      />
                       <DynamicinputList headers={headers} />
 
-                      <PrimaryScalesSelector scales={scales} primaryScales={primaryScales} onSave={handleSelectedScales} />
-
+                      <PrimaryScalesSelector
+                        scales={scales}
+                        primaryScales={primaryScales}
+                        onSave={handleSelectedScales}
+                      />
 
                       <div className="md:col-span-2">
-
                         <FormulaEditor
                           scales={scales}
                           formulas={formulas}
                           onSave={(formula) => {
                             // Update your formulas array
 
-                            setFormulas(prev => {
-                              const existingIndex = prev.findIndex(f => f.formulaname === formula.formulaname);
+                            setFormulas((prev) => {
+                              const existingIndex = prev.findIndex(
+                                (f) => f.formulaname === formula.formulaname,
+                              );
                               if (existingIndex >= 0) {
                                 const updated = [...prev];
                                 updated[existingIndex] = formula;
 
-
                                 return updated;
                               }
                               return [...prev, formula];
-
-
                             });
                           }}
                           onDelete={({ formulaname }) => {
                             // Remove the formula
                             console.log("Deleting formula:", formulaname);
-                            setFormulas(prev => prev.filter(f => f.formulaname !== formulaname));
+                            setFormulas((prev) =>
+                              prev.filter((f) => f.formulaname !== formulaname),
+                            );
 
                             handleDelete(formulaname);
                           }}
                         />
                       </div>
 
-                      {show && <ResponseModal successful={successful} message={message} setShow={setShow} />}
+                      {show && (
+                        <ResponseModal
+                          successful={successful}
+                          message={message}
+                          setShow={setShow}
+                        />
+                      )}
                     </div>
 
-                    <SharedTable title={["Scale", "Iccid", "Mtd Opening"]} scales={scales} fetchData={fetchData} />
-
-
+                    <SharedTable
+                      title={["Scale", "Iccid", "Mtd Opening"]}
+                      scales={scales}
+                      fetchData={fetchData}
+                    />
                   </TabsContent>
                   <TabsContent value="iotnplc">
                     {/* Dropdown button */}
@@ -615,65 +602,82 @@ export default function DashboardPage() {
                           <Button variant="outline">Add Component</Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => setInputListCount((prev) => prev + 1)}>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setInputListCount((prev) => prev + 1)
+                            }
+                          >
                             Add Input List
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setTableCount((prev) => prev + 1)}>
+                          <DropdownMenuItem
+                            onClick={() => setTableCount((prev) => prev + 1)}
+                          >
                             Add Table
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
 
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 p-2">
-
                       {/* this loads from the database   */}
                       {dynamicinput.map((item, index) => (
-                        <InputList key={index} initialHeaderName={item.inputListName} initialInputs={item.inputs} setDynamicInputs={setDynamicInputs} setInputListCount={setInputListCount} inputListCount={inputListCount} />
+                        <InputList
+                          key={index}
+                          initialHeaderName={item.inputListName}
+                          initialInputs={item.inputs}
+                          setDynamicInputs={setDynamicInputs}
+                          setInputListCount={setInputListCount}
+                          inputListCount={inputListCount}
+                        />
                       ))}
 
                       {/* this creates them dynamically */}
-                      {Array.from({ length: inputListCount }).map((_, index) => (
-                        <InputList key={`input-${index}`} initialHeaderName="Custom Header" initialInputs={initialInputs} setDynamicInputs={setDynamicInputs} setInputListCount={setInputListCount} inputListCount={inputListCount} />
-
-                      ))}
-
+                      {Array.from({ length: inputListCount }).map(
+                        (_, index) => (
+                          <InputList
+                            key={`input-${index}`}
+                            initialHeaderName="Custom Header"
+                            initialInputs={initialInputs}
+                            setDynamicInputs={setDynamicInputs}
+                            setInputListCount={setInputListCount}
+                            inputListCount={inputListCount}
+                          />
+                        ),
+                      )}
                     </div>
 
                     {/* Render Tables */}
 
-
                     <div className="grid grid-cols-1   lg:grid-cols-2 gap-2 p-2">
-                      {dynamictables.length > 0 && dynamictables.map((item, index) => (
+                      {dynamictables.length > 0 &&
+                        dynamictables.map((item, index) => (
+                          <DynamicTable
+                            key={index}
+                            table={[item]}
+                            setDynamictables={setDynamictables}
+                            setDbTableCount={setDbTableCount}
+                            tableCount={dbtableCount}
+                          />
+                        ))}
+
+                      {Array.from({ length: tableCount }).map((_, index) => (
                         <DynamicTable
-                          key={index}
-                          table={[item]}
+                          key={`table-${index}`}
+                          table={initialTable}
                           setDynamictables={setDynamictables}
                           setDbTableCount={setDbTableCount}
                           tableCount={dbtableCount}
                         />
                       ))}
-
-
-                      {Array.from({ length: tableCount }).map((_, index) => (
-                        <DynamicTable key={`table-${index}`} table={initialTable} setDynamictables={setDynamictables} setDbTableCount={setDbTableCount} tableCount={dbtableCount} />
-                      ))}
                     </div>
-
                   </TabsContent>
                 </Tabs>
               </div>
-            </>)}
+            </>
+          )}
         </main>
       )}
-      {sitedata && (
-        <Footer />
-      )}
+      {sitedata && <Footer />}
     </div>
   );
 }
-
-
-
-

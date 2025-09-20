@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import ConfigureAmplify from "@/utils/configureAmplify";
-import { Inter ,Oswald } from "next/font/google";
+import { Inter, Oswald } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 const oswald = Oswald({ subsets: ["latin"] });
-
 
 export const metadata: Metadata = {
   title: "Massive App",
@@ -20,9 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={oswald.className}>
       <body className={oswald.className}>
-      <ConfigureAmplify />
+        <ConfigureAmplify />
         {children}
-        </body>
+      </body>
     </html>
   );
 }

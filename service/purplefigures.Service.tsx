@@ -1,6 +1,5 @@
 import { client } from "./schemaClient";
 
-
 export const createOrUpdatePurpleDaily = async (
   siteId: string,
   payload: {
@@ -8,17 +7,14 @@ export const createOrUpdatePurpleDaily = async (
       iccid: string;
       purpleValues: Record<string, Record<string, string>>; // day -> hours
     }>;
-  }
+  },
 ) => {
   try {
     const { data } = payload;
 
     if (!Array.isArray(data)) {
       throw new Error("Data must be an array");
-
     }
-
-
 
     const promises: Promise<any>[] = [];
 
@@ -31,53 +27,52 @@ export const createOrUpdatePurpleDaily = async (
           (async () => {
             // Fetch existing records for the date
             const { data: existingRecords, errors: queryErrors } =
-              await client.models.Purplefigures.listPurplefiguresByDate({ date });
+              await client.models.Purplefigures.listPurplefiguresByDate({
+                date,
+              });
 
             if (queryErrors) throw queryErrors;
 
             // Find matching row for siteId + iccid
             const existingRow = existingRecords.find(
-              item => item.siteId === siteId && item.iccid === iccid
+              (item) => item.siteId === siteId && item.iccid === iccid,
             );
 
-
             if (existingRow) {
-
               // Update existing row only if values actually change
               const existingPurpleValues =
                 typeof existingRow.purpleValues === "string"
                   ? JSON.parse(existingRow.purpleValues)
                   : existingRow.purpleValues || {};
 
+              const { data: updated, errors: errors } =
+                await client.models.Purplefigures.update({
+                  id: existingRow.id,
+                  siteId: existingRow.siteId,
+                  date: existingRow.date,
+                  iccid: existingRow.iccid,
+                  purpleValues: JSON.stringify({
+                    ...existingPurpleValues,
+                    ...hours,
+                  }),
+                });
 
-
-              const { data: updated, errors: errors } = await client.models.Purplefigures.update({
-                id: existingRow.id,
-                siteId: existingRow.siteId,
-                date: existingRow.date,
-                iccid: existingRow.iccid,
-                purpleValues: JSON.stringify({ ...existingPurpleValues, ...hours })
-              });
-
-            
               if (errors) throw errors;
               return updated;
-
-
             } else {
-
               // Create new row
-              const { data: created, errors } = await client.models.Purplefigures.create({
-                siteId,
-                iccid,
-                date,
-                purpleValues: JSON.stringify(hours),
-              });
+              const { data: created, errors } =
+                await client.models.Purplefigures.create({
+                  siteId,
+                  iccid,
+                  date,
+                  purpleValues: JSON.stringify(hours),
+                });
 
               if (errors) throw errors;
               return created;
             }
-          })()
+          })(),
         );
       }
     }
@@ -93,4 +88,3 @@ export const createOrUpdatePurpleDaily = async (
     throw error;
   }
 };
-

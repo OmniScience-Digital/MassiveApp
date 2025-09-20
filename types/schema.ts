@@ -1,4 +1,8 @@
-export type SignInFlow = 'signIn' | 'signUp' | 'forgotPassword' | 'resetPassword'; //union type
+export type SignInFlow =
+  | "signIn"
+  | "signUp"
+  | "forgotPassword"
+  | "resetPassword"; //union type
 export type DataItem = {
   id: string;
   items: string;
@@ -6,10 +10,7 @@ export type DataItem = {
   updatedAt: string;
 };
 
-
-
-
-export type  SiteConstantsInterface= {
+export type SiteConstantsInterface = {
   siteName: string;
   telegramId: string;
   totalMonthTarget: number;
@@ -21,23 +22,22 @@ export type  SiteConstantsInterface= {
   email: string;
   reporttype: string;
   reportTo: string;
-}
+};
 
-export type InputType = "table" ;
-
+export type InputType = "table";
 
 export type ReportItem = {
-  id: string; 
+  id: string;
   audit?: boolean;
   progressive?: boolean;
-   hourly?: boolean;
+  hourly?: boolean;
   siteStatus: string;
   siteConstants: {
     siteName: string;
     telegramId: string;
-    totalMonthTarget: number; 
-    runningTph: number; 
-    maxUtilization: number; 
+    totalMonthTarget: number;
+    runningTph: number;
+    maxUtilization: number;
     siteType: string;
     scaleType: string;
     shiftftp: string;
@@ -53,41 +53,43 @@ export type ReportItem = {
     nightStop: string;
     extraShiftStart: string;
     extraShiftStop: string;
-    twentyFourhourShift?:boolean;
+    twentyFourhourShift?: boolean;
   };
   scales: {
     scalename: string;
     iccid: string;
-    openingScaletons:string;
+    openingScaletons: string;
   }[];
-  headers:{
-    headername: string
+  headers: {
+    headername: string;
   }[];
-  primaryScales:string[];
+  primaryScales: string[];
   formulas: {
-    formulaname: string,
-    formula: string,
-    virtualformula:boolean
+    formulaname: string;
+    formula: string;
+    virtualformula: boolean;
   }[];
-  
+
   dynamic_inputs: {
-    inputListName: string; 
-    inputs: { type: "text" | "number" | "date"; value: any; label: string; isEditing: boolean }[];
+    inputListName: string;
+    inputs: {
+      type: "text" | "number" | "date";
+      value: any;
+      label: string;
+      isEditing: boolean;
+    }[];
   }[];
   dynamic_tables: {
-    id:number;
+    id: number;
     tableName: string;
     columns: string[];
-    data: { [key: string]: any }[]; 
+    data: { [key: string]: any }[];
   }[];
-
 };
-
-
 
 export interface RuntimesAudit {
   id: string;
-  date: string | null;  // Allow null
+  date: string | null; // Allow null
   scales: any[];
 }
 

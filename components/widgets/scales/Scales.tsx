@@ -23,25 +23,27 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import ResponseModal from "../response";
-import { createTelegramScale, updateTelegramScale,deleteTelegramScale } from "@/service/scales.Service";
-
+import {
+  createTelegramScale,
+  updateTelegramScale,
+  deleteTelegramScale,
+} from "@/service/scales.Service";
 
 interface ScaleRow {
   id?: string;
   scalename: string;
   iccid: string;
-  openingScaletons:string;
+  openingScaletons: string;
   [key: string]: string | undefined;
 }
 
 interface SharedTableProps {
   title: string[];
   scales: ScaleRow[];
-  fetchData:()=>void;
-
+  fetchData: () => void;
 }
 
-const SharedTable = ({ title, scales ,fetchData}: SharedTableProps) => {
+const SharedTable = ({ title, scales, fetchData }: SharedTableProps) => {
   const { id } = useParams<{ id: string }>();
 
   const [rows, setRows] = useState<ScaleRow[]>(scales);
@@ -49,34 +51,33 @@ const SharedTable = ({ title, scales ,fetchData}: SharedTableProps) => {
   const [rowToDelete, setRowToDelete] = useState<ScaleRow | null>(null);
   const [indexToDelete, setIndexToDelete] = useState<number | null>(null);
 
-  const [loadingRows, setLoadingRows] = useState<{ [key: number]: boolean }>({});
+  const [loadingRows, setLoadingRows] = useState<{ [key: number]: boolean }>(
+    {},
+  );
 
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
-  const [message, setMessage] = useState('');
-
-
+  const [message, setMessage] = useState("");
 
   const initialRowState: ScaleRow = {
     scalename: "",
     iccid: "",
-    openingScaletons:"",
+    openingScaletons: "",
     ...Object.fromEntries(title.map((columnName) => [columnName, ""])),
   };
 
-  const handleChange = (idx: number, columnName: string) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const { value } = e.target;
-    const updatedRows = [...rows];
-    updatedRows[idx] = {
-      ...updatedRows[idx],
-      [columnName]: value,
+  const handleChange =
+    (idx: number, columnName: string) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { value } = e.target;
+      const updatedRows = [...rows];
+      updatedRows[idx] = {
+        ...updatedRows[idx],
+        [columnName]: value,
+      };
+      setRows(updatedRows);
     };
-    setRows(updatedRows);
-  };
 
-  
   const handleAddRow = () => {
     const newItem: ScaleRow = {
       ...initialRowState,
@@ -91,33 +92,25 @@ const SharedTable = ({ title, scales ,fetchData}: SharedTableProps) => {
     setConfirmDialogOpen(true);
   };
 
-
   const confirmDelete = async () => {
-    
-
     if (indexToDelete === null || !rowToDelete) return;
-    
+
     const updatedRows = [...rows];
     updatedRows.splice(indexToDelete, 1);
     setRows(updatedRows);
-    
 
     try {
-      
-       await deleteTelegramScale(id as string,rowToDelete);
-      setShow(true)
-      setSuccessful(true)
-      setMessage("Scale deleted successfully")
+      await deleteTelegramScale(id as string, rowToDelete);
+      setShow(true);
+      setSuccessful(true);
+      setMessage("Scale deleted successfully");
       fetchData();
 
       // onScaleupdate();
     } catch (error) {
-
-      setShow(true)
-      setSuccessful(false)
-      setMessage("Failed to  delete scale")
-
-
+      setShow(true);
+      setSuccessful(false);
+      setMessage("Failed to  delete scale");
     } finally {
       setConfirmDialogOpen(false);
       setRowToDelete(null);
@@ -126,45 +119,30 @@ const SharedTable = ({ title, scales ,fetchData}: SharedTableProps) => {
   };
 
   const handleSaveRow = async (row: ScaleRow, rowIndex: number) => {
+    // Set loading state for the specific row
+    setLoadingRows((prev) => ({ ...prev, [rowIndex]: true }));
 
-      // Set loading state for the specific row
-      setLoadingRows((prev) => ({ ...prev, [rowIndex]: true }));
-
-    const exists = scales.some(scale => scale.scalename === row.scalename);
-
+    const exists = scales.some((scale) => scale.scalename === row.scalename);
 
     try {
       if (!exists) {
-
-
         if (row.scalename && row.iccid) {
-
-          const createScale = await createTelegramScale(
-            id as string,
-            {
-              scalename: row.scalename,
-              iccid: row.iccid,
-              openingScaletons: row.openingScaletons      
-            }
-          );
-
+          const createScale = await createTelegramScale(id as string, {
+            scalename: row.scalename,
+            iccid: row.iccid,
+            openingScaletons: row.openingScaletons,
+          });
 
           if (createScale) {
-
             setShow(true);
             setSuccessful(true);
-            setMessage("Scale created successfully")
+            setMessage("Scale created successfully");
             fetchData();
-
-          }
-          else {
+          } else {
             setSuccessful(false);
-            setMessage('Failed to create scale');
+            setMessage("Failed to create scale");
             setShow(true);
           }
-
-
-
         }
       } else {
         // If the row has an id, it's an existing row
@@ -172,41 +150,36 @@ const SharedTable = ({ title, scales ,fetchData}: SharedTableProps) => {
         updatedRows[rowIndex] = row;
         setRows(updatedRows);
 
-
-       await updateTelegramScale(id as string,
-          {
-            scalename: row.scalename,
-            iccid: row.iccid,
-            openingScaletons: row.openingScaletons
-            
-          })
+        await updateTelegramScale(id as string, {
+          scalename: row.scalename,
+          iccid: row.iccid,
+          openingScaletons: row.openingScaletons,
+        });
 
         setShow(true);
         setSuccessful(true);
-        setMessage("Scale updated successfully")
+        setMessage("Scale updated successfully");
         fetchData();
-
       }
     } catch (error) {
-
       setShow(true);
       setSuccessful(true);
-      setMessage("Failed to save scale")
-
-    }finally {
+      setMessage("Failed to save scale");
+    } finally {
       // Reset loading state for that row
       setLoadingRows((prev) => ({ ...prev, [rowIndex]: false }));
     }
-
-
   };
 
   return (
     <div className="p-2 relative">
-      {
-        show && <ResponseModal successful={successful} message={message} setShow={setShow} />
-      }
-
+      {show && (
+        <ResponseModal
+          successful={successful}
+          message={message}
+          setShow={setShow}
+        />
+      )}
 
       <Button onClick={handleAddRow} className="float-right m-2">
         <Plus className="mr-2 h-4 w-4" />
@@ -244,14 +217,14 @@ const SharedTable = ({ title, scales ,fetchData}: SharedTableProps) => {
                   />
                 </TableCell>
 
-                   <TableCell>
+                <TableCell>
                   <Input
                     type="text"
                     value={row.openingScaletons}
                     onChange={handleChange(index, "openingScaletons")}
                   />
                 </TableCell>
-          
+
                 <TableCell>
                   <Button
                     variant="outline"
@@ -263,22 +236,22 @@ const SharedTable = ({ title, scales ,fetchData}: SharedTableProps) => {
                   </Button>
                 </TableCell>
                 <TableCell>
-              {loadingRows[index] ? (
-                <Button disabled>
-                  <Loader2 className="animate-spin" />
-                  Please wait
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => handleSaveRow(row, index)}
-                  className="text-green-500"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Save
-                </Button>
-              )}
-            </TableCell>
+                  {loadingRows[index] ? (
+                    <Button disabled>
+                      <Loader2 className="animate-spin" />
+                      Please wait
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSaveRow(row, index)}
+                      className="text-green-500"
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      Save
+                    </Button>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -290,7 +263,8 @@ const SharedTable = ({ title, scales ,fetchData}: SharedTableProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this row? Make Sure scale is not selected as a primary scale !!
+              Are you sure you want to delete this row? Make Sure scale is not
+              selected as a primary scale !!
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -6,16 +6,17 @@ interface ThreeWayToggleProps {
   runValue: string;
 }
 
-const ThreeWayToggle: React.FC<ThreeWayToggleProps> = ({ onChange, runValue }) => {
+const ThreeWayToggle: React.FC<ThreeWayToggleProps> = ({
+  onChange,
+  runValue,
+}) => {
   const [alignment, setAlignment] = useState<string>(runValue);
-
 
   const handleAlignment = (value: string) => {
     setAlignment(value);
     onChange(value);
 
     //update db value
-
   };
 
   return (
@@ -30,10 +31,10 @@ const ThreeWayToggle: React.FC<ThreeWayToggleProps> = ({ onChange, runValue }) =
           value="off"
           aria-label="Toggle off"
           className={`${
-            alignment === "off" ? "!bg-gray-400 !text-white border-transparent" : ""
+            alignment === "off"
+              ? "!bg-gray-400 !text-white border-transparent"
+              : ""
           } font-normal`}
-          
-
         >
           OFF
         </ToggleGroupItem>
@@ -41,9 +42,10 @@ const ThreeWayToggle: React.FC<ThreeWayToggleProps> = ({ onChange, runValue }) =
           value="test"
           aria-label="Toggle test"
           className={`${
-            alignment === "test" ? "!bg-gray-400 !text-white border-transparent" : ""
+            alignment === "test"
+              ? "!bg-gray-400 !text-white border-transparent"
+              : ""
           } font-normal`}
-          
         >
           TEST
         </ToggleGroupItem>
@@ -51,9 +53,10 @@ const ThreeWayToggle: React.FC<ThreeWayToggleProps> = ({ onChange, runValue }) =
           value="prod"
           aria-label="Toggle prod"
           className={`${
-            alignment === "prod" ? "!bg-gray-400 !text-white border-transparent" : ""
+            alignment === "prod"
+              ? "!bg-gray-400 !text-white border-transparent"
+              : ""
           } font-normal`}
-          
         >
           PROD
         </ToggleGroupItem>

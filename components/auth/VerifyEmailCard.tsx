@@ -1,7 +1,13 @@
 // components/auth/VerifyEmailCard.tsx
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { confirmSignUp } from "aws-amplify/auth";
 import { useFormik } from "formik";
@@ -17,11 +23,11 @@ interface VerifyEmailCardProps {
 
 const RESEND_COOLDOWN = 30; // seconds
 
-export const VerifyEmailCard = ({ 
-  email, 
-  onVerificationComplete, 
+export const VerifyEmailCard = ({
+  email,
+  onVerificationComplete,
   onResendCode,
-  onChangeEmail 
+  onChangeEmail,
 }: VerifyEmailCardProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -33,8 +39,8 @@ export const VerifyEmailCard = ({
   const codeInputRef = useRef<HTMLInputElement>(null);
 
   // Split code into individual digits
-  const [digits, setDigits] = useState<string[]>(Array(6).fill(''));
-  
+  const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
+
   // Auto-focus on mount
   useEffect(() => {
     codeInputRef.current?.focus();
@@ -51,32 +57,36 @@ export const VerifyEmailCard = ({
 
   const validationSchema = Yup.object({
     code: Yup.string()
-      .length(6, 'Verification code must be 6 characters')
-      .required('Verification code is required')
+      .length(6, "Verification code must be 6 characters")
+      .required("Verification code is required"),
   });
 
   const handleDigitChange = (index: number, value: string) => {
     if (!/^[0-9]*$/.test(value)) return;
-    
+
     const newDigits = [...digits];
     newDigits[index] = value;
     setDigits(newDigits);
-    
+
     // Auto-advance to next input
     if (value && index < 5) {
-      const nextInput = document.getElementById(`digit-${index + 1}`) as HTMLInputElement;
+      const nextInput = document.getElementById(
+        `digit-${index + 1}`,
+      ) as HTMLInputElement;
       nextInput?.focus();
     }
-    
+
     // Auto-submit if last digit entered
     if (index === 5 && value) {
-      handleSubmit({ code: newDigits.join('') });
+      handleSubmit({ code: newDigits.join("") });
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !digits[index] && index > 0) {
-      const prevInput = document.getElementById(`digit-${index - 1}`) as HTMLInputElement;
+    if (e.key === "Backspace" && !digits[index] && index > 0) {
+      const prevInput = document.getElementById(
+        `digit-${index - 1}`,
+      ) as HTMLInputElement;
       prevInput?.focus();
     }
   };
@@ -87,19 +97,21 @@ export const VerifyEmailCard = ({
     try {
       await confirmSignUp({
         username: email,
-        confirmationCode: values.code
+        confirmationCode: values.code,
       });
-      
+
       setVerificationSuccess(true);
-      setSuccess('Email verified successfully! Redirecting...');
-      
+      setSuccess("Email verified successfully! Redirecting...");
+
       setTimeout(() => {
         onVerificationComplete();
       }, 1500);
     } catch (err) {
-      console.error('Error verifying email:', err);
-      setVerificationAttempts(prev => prev + 1);
-      setError(err instanceof Error ? err.message : 'Invalid verification code');
+      console.error("Error verifying email:", err);
+      setVerificationAttempts((prev) => prev + 1);
+      setError(
+        err instanceof Error ? err.message : "Invalid verification code",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -107,25 +119,25 @@ export const VerifyEmailCard = ({
 
   const formik = useFormik({
     initialValues: {
-      code: ''
+      code: "",
     },
     validationSchema,
-    onSubmit: handleSubmit
+    onSubmit: handleSubmit,
   });
 
   const handleResendCode = async () => {
     if (countdown > 0) return;
-    
+
     setIsResending(true);
     setError(null);
     try {
       await onResendCode();
       setCountdown(RESEND_COOLDOWN);
-      setSuccess('New verification code sent!');
+      setSuccess("New verification code sent!");
       setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
-      console.error('Error resending code:', err);
-      setError(err instanceof Error ? err.message : 'Failed to resend code');
+      console.error("Error resending code:", err);
+      setError(err instanceof Error ? err.message : "Failed to resend code");
     } finally {
       setIsResending(false);
     }
@@ -154,7 +166,8 @@ export const VerifyEmailCard = ({
       <CardHeader className="px-0 pt-3 my-5">
         <CardTitle>Verify your email</CardTitle>
         <CardDescription>
-          We've sent a 6-digit code to <span className="font-medium">{email}</span>
+          We've sent a 6-digit code to{" "}
+          <span className="font-medium">{email}</span>
         </CardDescription>
       </CardHeader>
 
@@ -164,8 +177,8 @@ export const VerifyEmailCard = ({
             {error}
             {verificationAttempts >= 3 && (
               <div className="mt-2">
-                Having trouble?{' '}
-                <button 
+                Having trouble?{" "}
+                <button
                   onClick={onChangeEmail}
                   className="text-sky-700 hover:underline"
                 >
@@ -204,9 +217,9 @@ export const VerifyEmailCard = ({
             type="submit"
             className="w-full"
             size="lg"
-            disabled={isSubmitting || digits.some(d => !d)}
+            disabled={isSubmitting || digits.some((d) => !d)}
           >
-            {isSubmitting ? 'Verifying...' : 'Verify Email'}
+            {isSubmitting ? "Verifying..." : "Verify Email"}
           </Button>
         </form>
 
@@ -220,7 +233,7 @@ export const VerifyEmailCard = ({
               disabled={isResending}
               className="text-sky-700 hover:underline cursor-pointer"
             >
-              {isResending ? 'Sending...' : 'Resend code'}
+              {isResending ? "Sending..." : "Resend code"}
             </button>
           )}
         </div>

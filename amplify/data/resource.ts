@@ -39,6 +39,7 @@ const schema = a.schema({
       iccid: a.string().required(),
       rowdate: a.date().required(),
       purpleValues: a.json(), // { "00": "1", "01": "2", ..., "23": "3" }
+      dayTotal: a.string().required(),
     })
     .secondaryIndexes((index) => [
       index("siteId").sortKeys(["rowdate"]),

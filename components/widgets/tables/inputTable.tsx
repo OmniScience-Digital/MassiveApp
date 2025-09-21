@@ -22,6 +22,8 @@ interface InputTableProps {
     viewMode: "single" | "all";
     lastAction: "auto-fill" | "manual" | "preset" | "bulk";
     cellSelection: CellSelection;
+         startdate:string;
+    enddate:string;
     dates: string[];
     hours: string[];
     allIccids: string[];
@@ -64,6 +66,8 @@ export const InputTable = ({
     id,
     currentIccid,
     viewMode,
+     startdate,
+    enddate,
     lastAction,
     cellSelection,
     hasCalculated,
@@ -251,14 +255,10 @@ export const InputTable = ({
                 });
             });
 
-
             setLoadingBtn2(true);
 
-            console.log(inputValuePayload);
-
-
             // Save input values
-            await createOrUpdateInputValueTable(inputValuePayload);
+            await createOrUpdateInputValueTable(startdate,enddate,inputValuePayload);
 
             setMessage(`Input values saved successfully.`);
             setShow(true);
@@ -275,6 +275,7 @@ export const InputTable = ({
 
     const handleSavePurpleToDB = async () => {
         try {
+            console.log('Called purple saving');
             // Prepare payload for purple figures
             const purpleFigurePayload = {
                 data: allIccids.map((iccid) => ({
@@ -297,8 +298,10 @@ export const InputTable = ({
 
             setLoadingBtn3(true);
 
+            console.log(purpleFigurePayload)
+
             // Save both input values and purple figures
-            await createOrUpdatePurpleDaily(id, purpleFigurePayload);
+           // await createOrUpdatePurpleDaily(id, purpleFigurePayload);
 
             setMessage(`Purple figures saved successfully.`);
             setShow(true);

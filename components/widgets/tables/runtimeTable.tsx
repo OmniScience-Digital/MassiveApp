@@ -51,6 +51,13 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState("");
 
+  //purple figure componets 
+  const [dayTotals, setDayTotals] = useState<Record<string, number>>({});
+  const [progressiveTotal, setProgressiveTotal] = useState(0);
+  const [allDayTotals, setAllDayTotals] = useState<Record<string, Record<string, number>>>({});
+  const [allProgressiveTotals, setAllProgressiveTotals] = useState<Record<string, number>>({});
+
+
 
 
 
@@ -114,105 +121,6 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
     newHistory.push(JSON.parse(JSON.stringify(currentState)));
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-  };
-
-  const handleCalculate = () => {
-    setLoadingBtn(true);
-    const result: Record<string, Record<string, number>> = {};
-
-    for (const date of dates) {
-      result[date] = {};
-      for (const hour of hours) {
-        const runtimeVal = dateToHourValues[date]?.[hour];
-        const inputVal = inputValues[date]?.[hour];
-
-        const parsedInput = parseFloat(inputVal || "0") || 0;
-        const multiplier = inputVal === "" ? 0 : parsedInput;
-        const value =
-          typeof runtimeVal === "number" ? runtimeVal * multiplier : 0;
-
-        result[date][hour] = value;
-      }
-    }
-
-    // Update both calculated values and preserve input values
-    setCalculatedValues(result);
-    setAllCalculatedValues((prev) => ({
-      ...prev,
-      [currentIccid]: result,
-    }));
-
-    // Ensure input values are preserved in the allInputValues state
-    setAllInputValues((prev) => ({
-      ...prev,
-      [currentIccid]: inputValues,
-    }));
-
-    // Enable save button after calculation
-    setHasCalculated(true);
-    setLoadingBtn(false);
-  };
-
-  const handleCalculateAll = () => {
-    setLoadingBtn(true);
-
-    const allResults: Record<
-      string,
-      Record<string, Record<string, number>>
-    > = {};
-
-    allIccids.forEach((iccid) => {
-      const normalizedIccid = normalize(iccid);
-      const matchedKey = Object.keys(allInputValues).find(
-        (key) => normalize(key) === normalizedIccid,
-      );
-
-      if (!matchedKey) return;
-
-      const iccidRuntimeData = iccidRuntimes.reduce(
-        (acc, dayData) => {
-          if (!dayData.date) return acc;
-          const scale = dayData.scales.find((s) => s.iccid === iccid);
-          if (!scale) return acc;
-
-          const hourMap = scale.runtime.reduce(
-            (hourAcc, runtime) => {
-              hourAcc[runtime.hour] = runtime.totalDeltaSum;
-              return hourAcc;
-            },
-            {} as Record<string, number>,
-          );
-
-          acc[dayData.date] = hourMap;
-          return acc;
-        },
-        {} as Record<string, Record<string, number>>,
-      );
-
-      const iccidDates = Object.keys(iccidRuntimeData);
-
-      allResults[iccid] = {};
-
-      iccidDates.forEach((date) => {
-        allResults[iccid][date] = {};
-        hours.forEach((hour) => {
-          const runtimeVal = iccidRuntimeData[date]?.[hour];
-          const inputVal = allInputValues[matchedKey]?.[date]?.[hour] || "0";
-
-          const parsedInput = parseFloat(inputVal) || 0;
-          const multiplier = inputVal === "" ? 0 : parsedInput;
-          const value =
-            typeof runtimeVal === "number" ? runtimeVal * multiplier : 0;
-
-          allResults[iccid][date][hour] = value;
-        });
-      });
-    });
-
-    setAllCalculatedValues(allResults);
-    // Enable save button after calculation
-    setHasCalculated(true);
-    setLoadingBtn(false);
   };
 
   const handleMouseUp = () => {
@@ -308,6 +216,172 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
       setLoadingBtn(false);
     }
   };
+  // Add this function outside your component, or inside if you prefer
+  const calculateDayTotal = (
+    date: string,
+    allDates: string[],
+    dateIndex: number,
+    hourlyValues: Record<string, Record<string, number>>,
+    hours: string[]
+  ): number => {
+    // Sum hours from 06 to 23 for the current date
+    const currentDaySum = hours
+      .filter((hour) => hour >= "06")
+      .reduce((sum, hour) => sum + (hourlyValues[date]?.[hour] || 0), 0);
+
+    // Check if there's a next date (for hours 00-05)
+    const nextDate = allDates[dateIndex + 1];
+    const nextDaySum = nextDate
+      ? hours
+        .filter((hour) => hour <= "05")
+        .reduce((sum, hour) => sum + (hourlyValues[nextDate]?.[hour] || 0), 0)
+      : 0;
+
+    return currentDaySum + nextDaySum;
+  };
+
+  const handleCalculate = () => {
+    setLoadingBtn(true);
+    const result: Record<string, Record<string, number>> = {};
+    const dayTotals: Record<string, number> = {}; // New object to store day totals
+
+    for (const date of dates) {
+      result[date] = {};
+      for (const hour of hours) {
+        const runtimeVal = dateToHourValues[date]?.[hour];
+        const inputVal = inputValues[date]?.[hour];
+
+        const parsedInput = parseFloat(inputVal || "0") || 0;
+        const multiplier = inputVal === "" ? 0 : parsedInput;
+        const value =
+          typeof runtimeVal === "number" ? runtimeVal * multiplier : 0;
+
+        result[date][hour] = value;
+      }
+    }
+    const newDayTotals: Record<string, number> = {};
+    let newProgressiveTotal = 0;
+
+
+    dates.forEach((date, index) => {
+      const dayTotal = calculateDayTotal(date, dates, index, result, hours);
+      newDayTotals[date] = dayTotal;
+      newProgressiveTotal += dayTotal;
+    });
+
+    setDayTotals(newDayTotals);
+    setProgressiveTotal(newProgressiveTotal);
+
+    // Update both calculated values and preserve input values
+    setCalculatedValues(result);
+    setAllCalculatedValues((prev) => ({
+      ...prev,
+      [currentIccid]: result,
+    }));
+
+
+    // Ensure input values are preserved in the allInputValues state
+    setAllInputValues((prev) => ({
+      ...prev,
+      [currentIccid]: inputValues,
+    }));
+
+    // Enable save button after calculation
+    setHasCalculated(true);
+    setLoadingBtn(false);
+
+    return { calculatedValues: result, dayTotals };
+  };
+
+  const handleCalculateAll = () => {
+    setLoadingBtn(true);
+
+    const allResults: Record<string, Record<string, Record<string, number>>> = {};
+    const calculatedAllDayTotals: Record<string, Record<string, number>> = {}; // Renamed to avoid confusion with state
+    const calculatedProgressiveTotals: Record<string, number> = {};
+
+    allIccids.forEach((iccid) => {
+      const normalizedIccid = normalize(iccid);
+      const matchedKey = Object.keys(allInputValues).find(
+        (key) => normalize(key) === normalizedIccid
+      );
+
+      if (!matchedKey) return;
+
+      const iccidRuntimeData = iccidRuntimes.reduce(
+        (acc, dayData) => {
+          if (!dayData.date) return acc;
+          const scale = dayData.scales.find((s) => s.iccid === iccid);
+          if (!scale) return acc;
+
+          const hourMap = scale.runtime.reduce(
+            (hourAcc, runtime) => {
+              hourAcc[runtime.hour] = runtime.totalDeltaSum;
+              return hourAcc;
+            },
+            {} as Record<string, number>
+          );
+
+          acc[dayData.date] = hourMap;
+          return acc;
+        },
+        {} as Record<string, Record<string, number>>
+      );
+
+      const iccidDates = Object.keys(iccidRuntimeData).sort();
+
+      allResults[iccid] = {};
+      calculatedAllDayTotals[iccid] = {};
+
+      iccidDates.forEach((date) => {
+        allResults[iccid][date] = {};
+        hours.forEach((hour) => {
+          const runtimeVal = iccidRuntimeData[date]?.[hour];
+          const inputVal = allInputValues[matchedKey]?.[date]?.[hour] || "0";
+
+          const parsedInput = parseFloat(inputVal) || 0;
+          const multiplier = inputVal === "" ? 0 : parsedInput;
+          const value =
+            typeof runtimeVal === "number" ? runtimeVal * multiplier : 0;
+
+          allResults[iccid][date][hour] = value;
+        });
+      });
+
+      // Calculate day totals for this ICCID
+      let iccidProgressiveTotal = 0;
+      iccidDates.forEach((date, index) => {
+        const dayTotal = calculateDayTotal(
+          date,
+          iccidDates,
+          index,
+          allResults[iccid],
+          hours
+        );
+        calculatedAllDayTotals[iccid][date] = dayTotal;
+        iccidProgressiveTotal += dayTotal;
+      });
+
+      calculatedProgressiveTotals[iccid] = iccidProgressiveTotal;
+    });
+
+    // UPDATE ALL STATE VARIABLES
+    setAllCalculatedValues(allResults);
+    setAllDayTotals(calculatedAllDayTotals);
+    setAllProgressiveTotals(calculatedProgressiveTotals);
+
+    // Enable save button after calculation
+    setHasCalculated(true);
+    setLoadingBtn(false);
+
+    return {
+      allCalculatedValues: allResults,
+      allDayTotals: calculatedAllDayTotals,
+      allProgressiveTotals: calculatedProgressiveTotals
+    };
+  };
+
+
 
   // Auto-fill logic
   useEffect(() => {
@@ -440,6 +514,9 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
         historyIndex={historyIndex}
         currentIccid={currentIccid}
         id={id}
+        startdate={daterange.startDate}
+        enddate={daterange.endDate}
+
         loadinbtn2={loadinbtn2}
         loadinbtn={loadinbtn}
         hasCalculated={hasCalculated}
@@ -471,12 +548,17 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
           dates={dates}
           allCalculatedValues={allCalculatedValues}
           calculatedValues={calculatedValues}
+          dayTotals={dayTotals}
+          progressiveTotal={progressiveTotal}
         />
       ) : (
+
         <AllIccidsPurpleFigures
-          hours={hours}
-          allCalculatedValues={allCalculatedValues}
           allIccids={allIccids}
+          allCalculatedValues={allCalculatedValues}
+          allDayTotals={allDayTotals} // Pre-calculated
+          allProgressiveTotals={allProgressiveTotals} // Pre-calculated
+          hours={hours}
         />
       )}
 

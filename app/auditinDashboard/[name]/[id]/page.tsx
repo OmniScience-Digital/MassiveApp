@@ -443,74 +443,62 @@ const AuditingDashboard = () => {
             const endDate = endTime.split("T")[0];
 
             const { data: purplevalues, errors } =
-                await client.models.Purplefigures.listPurplefiguresBySiteIdAndDate({
+                await client.models.purpleTable.listpurpleTableBySiteIdAndRowdate({
                     siteId: id,
-                    date: { between: [startDate, endDate] },
+                    rowdate: { between: [startDate, endDate] },
                 });
 
-            if (errors) {
-                console.error("Error fetching purple figures:", errors);
-                return {};
+                
+               if (errors||!purplevalues) {
+                console.error("Error fetching purplevalues values:", errors);
+                return [];
             }
 
-            const processedData: Record<
-                string,
-                Record<string, Record<string, number>>
-            > = {};
+              return purplevalues.map((purplevalue) => {
+                // Safe parsing function
+                const parsePurpleValues = (input: any): Record<string, string> => {
+                    try {
+                        let data: any;
 
-            purplevalues.forEach((entry: any) => {
-                const iccid = entry.iccid;
-                const date = entry.date;
+                        if (typeof input === "string") {
+                            data = JSON.parse(input);
+                        } else {
+                            data = input;
+                        }
 
-                if (!processedData[iccid]) {
-                    processedData[iccid] = {};
-                }
+                        if (!data || typeof data !== "object" || Array.isArray(data)) {
+                            return {};
+                        }
 
-                if (!processedData[iccid][date]) {
-                    processedData[iccid][date] = {};
-                }
+                        const result: Record<string, string> = {};
+                        for (const [key, value] of Object.entries(data)) {
+                            result[key] = value !== null && value !== undefined ? String(value) : "";
+                        }
 
-                // Parse the purpleValues JSON string first
-                let parsedPurpleValues: Record<string, any> = {};
-
-                try {
-                    if (typeof entry.purpleValues === "string") {
-                        parsedPurpleValues = JSON.parse(entry.purpleValues);
-                    } else if (typeof entry.purpleValues === "object") {
-                        parsedPurpleValues = entry.purpleValues;
+                        return result;
+                    } catch (error) {
+                        console.error("Error parsing inputValues:", error);
+                        return {};
                     }
-                } catch (parseError) {
-                    console.error(
-                        "Error parsing purpleValues JSON:",
-                        parseError,
-                        "for entry:",
-                        entry,
-                    );
-                    parsedPurpleValues = {};
-                }
+                };
 
-                // Process the parsed purpleValues
-                Object.entries(parsedPurpleValues).forEach(([hour, value]) => {
-                    let numericValue: number;
-
-                    if (typeof value === "string") {
-                        numericValue = parseFloat(value) || 0;
-                    } else if (typeof value === "number") {
-                        numericValue = value;
-                    } else {
-                        numericValue = 0;
-                    }
-
-                    processedData[iccid][date][hour] = numericValue;
-                });
+                return {
+                    id: purplevalue.id,
+                    siteId: purplevalue.siteId,
+                    iccid: purplevalue.iccid,
+                    rowdate: purplevalue.rowdate,
+                    dayTotal: purplevalue.dayTotal,
+                    purpleValues: parsePurpleValues(purplevalue.purpleValues)
+                };
             });
-
-            return processedData;
+       
+            
         } catch (error) {
             console.error("Error in getPurpleTableValues:", error);
-            return {};
+            return [];
         }
     };
+
 
     // Fetch input values and purple values
     const fetchInputValues = useCallback(async (startTime: string, endTime: string) => {
@@ -520,8 +508,10 @@ const AuditingDashboard = () => {
                 getPurpleTableValues(startTime, endTime),
             ]);
 
+            console.log(iccidPurpleValues);
+
             const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
-            const loadedPurpleValues: Record<string, Record<string, Record<string, number>>> = iccidPurpleValues;
+          //  const loadedPurpleValues: Record<string, Record<string, Record<string, number>>> = iccidPurpleValues;
 
             // Process input values correctly
             iccidInputValues.forEach((entry: any) => {
@@ -549,10 +539,10 @@ const AuditingDashboard = () => {
                 ...prev,
                 ...loadedInputValues,
             }));
-            setAllCalculatedValues((prev) => ({
-                ...prev,
-                ...loadedPurpleValues,
-            }));
+            // setAllCalculatedValues((prev) => ({
+            //     ...prev,
+            //     ...loadedPurpleValues,
+            // }));
 
 
             // Update current ICCID values
@@ -560,24 +550,24 @@ const AuditingDashboard = () => {
             const matchedInputKey = Object.keys(loadedInputValues).find(
                 (key) => normalize(key) === normalizedCurrent
             );
-            const matchedPurpleKey = Object.keys(loadedPurpleValues).find(
-                (key) => normalize(key) === normalizedCurrent,
-            );
+            // const matchedPurpleKey = Object.keys(loadedPurpleValues).find(
+            //     (key) => normalize(key) === normalizedCurrent,
+            // );
 
             if (matchedInputKey) {
                 setInputValues(loadedInputValues[matchedInputKey] || {});
             } else {
                 setInputValues({});
             }
-            if (matchedPurpleKey) {
-                setCalculatedValues(loadedPurpleValues[matchedPurpleKey] || {});
-            } else {
-                setCalculatedValues({});
-            }
-            // Enable save button if purple values exist
-            if (Object.keys(loadedPurpleValues).length > 0) {
-                setHasCalculated(true);
-            }
+            // if (matchedPurpleKey) {
+            //     setCalculatedValues(loadedPurpleValues[matchedPurpleKey] || {});
+            // } else {
+            //     setCalculatedValues({});
+            // }
+            // // Enable save button if purple values exist
+            // if (Object.keys(loadedPurpleValues).length > 0) {
+            //     setHasCalculated(true);
+            // }
 
         } catch (error) {
             console.error("Error in fetchInputValues:", error);

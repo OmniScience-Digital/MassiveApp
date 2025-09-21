@@ -38,7 +38,7 @@ const schema = a.schema({
       siteId: a.string().required(),
       iccid: a.string().required(),
       rowdate: a.date().required(),
-      inputValues: a.json(), // { "00": "1", "01": "2", ..., "23": "3" }
+      purpleValues: a.json(), // { "00": "1", "01": "2", ..., "23": "3" }
     })
     .secondaryIndexes((index) => [
       index("siteId").sortKeys(["rowdate"]),

@@ -20,7 +20,7 @@ export const createOrUpdateInputValueTable = async (
       const { siteId, iccid, rowdate, inputValues } = item;
 
       // 1. Check if record already exists
-      // 1. Check if record already exists
+
       const { data: filteredRecords, errors: queryErrors } =
         await client.models.InputTable.listInputTableBySiteIdAndRowdate({
           siteId: siteId,
@@ -64,7 +64,7 @@ export const createOrUpdateInputValueTable = async (
             siteId,
             iccid,
             rowdate,
-            inputValues: JSON.stringify(mergedInputValues), // Convert to JSON string
+            inputValues: JSON.stringify(mergedInputValues),
           },
         );
 
@@ -98,57 +98,3 @@ export const createOrUpdateInputValueTable = async (
   }
 };
 
-//   siteId: string,
-//   iccid?: string,
-//   rowdate?: string, // Optional: delete specific date only
-// ) => {
-//   try {
-//     let filter: any = { siteId: { eq: siteId } };
-
-//     if (iccid) {
-//       filter.iccid = { eq: iccid };
-//     }
-
-//     if (rowdate) {
-//       filter.rowdate = { eq: rowdate };
-//     }
-
-//     // 1. Find the records to delete
-//     const { data: existingRecords, errors: queryErrors } =
-//       await client.models.InputTable.list({
-//         filter,
-//       });
-
-//     if (queryErrors) {
-//       console.error("Query error:", queryErrors);
-//       throw new Error("Failed to query records");
-//     }
-
-//     if (existingRecords.length === 0) {
-//       console.warn("No records found for deletion");
-//       return [];
-//     }
-
-//     const deletionResults = [];
-
-//     // 2. Delete all matching records
-//     for (const record of existingRecords) {
-//       const { data: deleted, errors } =
-//         await client.models.InputTable.delete({
-//           id: record.id,
-//         });
-
-//       if (errors) {
-//         console.error("Delete error for record:", record.id, errors);
-//         throw errors;
-//       }
-
-//       deletionResults.push(deleted);
-//     }
-
-//     return deletionResults;
-//   } catch (error) {
-//     console.error("Deletion failed:", error);
-//     throw error;
-//   }
-// };

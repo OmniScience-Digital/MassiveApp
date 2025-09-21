@@ -19,10 +19,6 @@ export interface datesAudit {
   endDate: string;
 }
 
-export interface RuntimeTableProps {
-  iccidRuntimes: RuntimesAudit[];
-  daterange: datesAudit;
-}
 
 export type CellSelection = {
   start: { date: string; hour: string } | null;

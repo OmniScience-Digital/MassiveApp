@@ -21,16 +21,19 @@ const schema = a.schema({
     .secondaryIndexes((index) => [index("siteId").sortKeys(["date"])])
     .authorization((allow) => [allow.publicApiKey()]),
 
-  InputValueTable: a
+  InputTable: a
     .model({
-      siteId: a.string().required(), // Unique identifier
-      timestamp: a.string(), // ISO 8601 timestamp
-      data: a.json(), // JSON array: [{ iccid: string, inputValues:    { '00:00': '...', '01:00': '...' } }]
+      siteId: a.string().required(),
+      iccid: a.string().required(),
+      rowdate: a.date().required(),
+      inputValues: a.json(), // { "00": "1", "01": "2", ..., "23": "3" }
     })
-    .secondaryIndexes((index) => [index("siteId")])
+    .secondaryIndexes((index) => [
+      index("siteId").sortKeys(["rowdate"]),
+    ])
     .authorization((allow) => [allow.publicApiKey()]),
 
-  InputTable: a
+    purpleTable: a
     .model({
       siteId: a.string().required(),
       iccid: a.string().required(),

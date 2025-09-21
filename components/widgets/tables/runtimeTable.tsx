@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -6,25 +6,41 @@ import { client } from "@/service/schemaClient";
 import ResponseModal from "../response";
 import DashboardDateSelector from "../requery_audit";
 import { runauditDateReport } from "@/app/api/audit.route";
-import { CellSelection, RuntimeData, RuntimeTableProps } from "@/types/runtime";
+import { CellSelection, datesAudit, RuntimeData, RuntimesAudit } from "@/types/runtime";
 import { getDatesBetween, normalize } from "@/utils/runtimeUtils";
 import { FlowTable } from "./flowTable";
 import { AllIccidsPurpleFigures, SinglePurpleFigures } from "./purpleTable";
 import { Allexports } from "@/components/RuntimeTable/SubComponents";
 import { InputTable } from "./inputTable";
 
-const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
+
+interface RuntimeTableProps {
+  iccidRuntimes: RuntimesAudit[];
+  currentIccidIndex: number;
+  hasCalculated: boolean;
+  hours: string[];
+  allIccids: string[];
+  currentIccid: string;
+  daterange: datesAudit;
+  inputValues: Record<string, Record<string, string>>;
+  allInputValues: Record<string, Record<string, Record<string, string>>>;
+  calculatedValues: Record<string, Record<string, number>>;
+  allCalculatedValues: Record<string, Record<string, Record<string, number>>>;
+  setAllCalculatedValues: React.Dispatch<React.SetStateAction<Record<string, Record<string, Record<string, number>>>>>;
+  setCalculatedValues: React.Dispatch<React.SetStateAction<Record<string, Record<string, number>>>>;
+  setAllInputValues: React.Dispatch<React.SetStateAction<Record<string, Record<string, Record<string, string>>>>>;
+  setInputValues: React.Dispatch<React.SetStateAction<Record<string, Record<string, string>>>>
+  setHasCalculated: React.Dispatch<React.SetStateAction<boolean>>;
+  setCurrentIccidIndex: React.Dispatch<React.SetStateAction<number>>
+
+}
+
+const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, daterange, allIccids, inputValues, allInputValues, calculatedValues, allCalculatedValues, currentIccidIndex, setAllCalculatedValues, setCalculatedValues, setAllInputValues, setInputValues, setHasCalculated, setCurrentIccidIndex }: RuntimeTableProps) => {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
   const dashboardname = decodeURIComponent(params.name as string).toUpperCase();
-
   const queryDates = getDatesBetween(daterange.startDate, daterange.endDate);
 
-  const allIccids = Array.from(
-    new Set(
-      iccidRuntimes.flatMap((day) => day.scales.map((scale) => scale.iccid)),
-    ),
-  );
 
   const [loadinbtnRequery, setLoadingRequeryBtn] = useState(false);
   const [loadinbtn, setLoadingBtn] = useState(false);
@@ -35,13 +51,9 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState("");
 
-  const [currentIccidIndex, setCurrentIccidIndex] = useState(0);
-  const [inputValues, setInputValues] = useState<
-    Record<string, Record<string, string>>
-  >({});
-  const [calculatedValues, setCalculatedValues] = useState<
-    Record<string, Record<string, number>>
-  >({});
+
+
+
   const [autoFillMode, setAutoFillMode] = useState<
     "right" | "below" | "all" | null
   >(null);
@@ -57,292 +69,11 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
   const [lastAction, setLastAction] = useState<
     "manual" | "auto-fill" | "preset" | "bulk"
   >("manual");
-  const [allInputValues, setAllInputValues] = useState<
-    Record<string, Record<string, Record<string, string>>>
-  >({});
-  const [allCalculatedValues, setAllCalculatedValues] = useState<
-    Record<string, Record<string, Record<string, number>>>
-  >({});
+
+
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [hasCalculated, setHasCalculated] = useState(false); // Track if calculation has been done
-
   const tableRef = useRef<HTMLDivElement>(null);
-  const currentIccid = allIccids[currentIccidIndex];
-  const hours = Array.from({ length: 24 }, (_, i) =>
-    i.toString().padStart(2, "0"),
-  );
 
-  // Fetch site table values
-  const getSiteTableValues = async (siteId: string) => {
-    try {
-      // const { data: inputvalues, errors } =
-      //   await client.models.InputTable.listInputTableBySiteIdAndRowdate({
-      //     siteId: siteId,
-      //     //rowdate: { between: [daterange.startDate, daterange.endDate] },
-      //   });
-
-      // Variation 2: Check if it wants the sort key as a separate parameter
-      const { data: inputvalues, errors } = await client.models.InputTable.listInputTableBySiteIdAndRowdate({
-  siteId: siteId,
-  rowdate: {
-    between: [daterange.startDate, daterange.endDate]
-  }
-});
-      console.log(daterange);
-
-      if (errors) {
-        console.error("Error fetching site:", errors);
-        setMessage(`Error fetching site: ${errors}`);
-        setShow(true);
-        setSuccessful(false);
-        return [];
-      }
-
-      return inputvalues.map((inputvalue) => {
-        let parsedInputValues: Record<string, string> = {};
-        try {
-          if (typeof inputvalue.inputValues === "string") {
-            const clean = inputvalue.inputValues
-              .replace(/\\"/g, '"')
-              .replace(/^"+|"+$/g, "");
-            const parsed = JSON.parse(clean);
-            // Ensure it's a Record<string, string>
-            if (
-              parsed &&
-              typeof parsed === "object" &&
-              !Array.isArray(parsed)
-            ) {
-              parsedInputValues = parsed;
-            }
-          } else if (
-            inputvalue.inputValues &&
-            typeof inputvalue.inputValues === "object" &&
-            !Array.isArray(inputvalue.inputValues)
-          ) {
-            parsedInputValues = inputvalue.inputValues as Record<
-              string,
-              string
-            >;
-          }
-        } catch (error) {
-          parsedInputValues = {};
-        }
-        return {
-          id: inputvalue.siteId,
-          iccid: inputvalue.iccid,
-          rowdate: inputvalue.rowdate,
-          inputValues: parsedInputValues,
-        };
-      });
-    } catch (error) {
-      console.error("Error in getSiteTableValues:", error);
-      return [];
-    }
-  };
-
-  // Fetch purple figures values
-  const getPurpleTableValues = async (siteId: string) => {
-    try {
-      const { data: purplevalues, errors } =
-        await client.models.Purplefigures.listPurplefiguresBySiteIdAndDate({
-          siteId: siteId,
-          date: { between: [daterange.startDate, daterange.endDate] },
-        });
-
-      if (errors) {
-        console.error("Error fetching purple figures:", errors);
-        return {};
-      }
-
-      const processedData: Record<
-        string,
-        Record<string, Record<string, number>>
-      > = {};
-
-      purplevalues.forEach((entry: any) => {
-        const iccid = entry.iccid;
-        const date = entry.date;
-
-        if (!processedData[iccid]) {
-          processedData[iccid] = {};
-        }
-
-        if (!processedData[iccid][date]) {
-          processedData[iccid][date] = {};
-        }
-
-        // Parse the purpleValues JSON string first
-        let parsedPurpleValues: Record<string, any> = {};
-
-        try {
-          if (typeof entry.purpleValues === "string") {
-            parsedPurpleValues = JSON.parse(entry.purpleValues);
-          } else if (typeof entry.purpleValues === "object") {
-            parsedPurpleValues = entry.purpleValues;
-          }
-        } catch (parseError) {
-          console.error(
-            "Error parsing purpleValues JSON:",
-            parseError,
-            "for entry:",
-            entry,
-          );
-          parsedPurpleValues = {};
-        }
-
-        // Process the parsed purpleValues
-        Object.entries(parsedPurpleValues).forEach(([hour, value]) => {
-          let numericValue: number;
-
-          if (typeof value === "string") {
-            numericValue = parseFloat(value) || 0;
-          } else if (typeof value === "number") {
-            numericValue = value;
-          } else {
-            numericValue = 0;
-          }
-
-          processedData[iccid][date][hour] = numericValue;
-        });
-      });
-
-      return processedData;
-    } catch (error) {
-      console.error("Error in getPurpleTableValues:", error);
-      return {};
-    }
-  };
-
-  // Fetch input values and purple values
-  const fetchInputValues = useCallback(async () => {
-    try {
-      const [iccidInputValues, iccidPurpleValues] = await Promise.all([
-        getSiteTableValues(id),
-        getPurpleTableValues(id),
-      ]);
-
-      const loadedInputValues: Record<
-        string,
-        Record<string, Record<string, string>>
-      > = {};
-      const loadedPurpleValues: Record<
-        string,
-        Record<string, Record<string, number>>
-      > = iccidPurpleValues;
-
-      // Process input values
-      iccidInputValues.forEach((entry: any) => {
-        // Handle data JSON field
-        if (entry.data && Array.isArray(entry.data)) {
-          entry.data.forEach((item: any) => {
-            const iccid = item.iccid;
-            if (!loadedInputValues[iccid]) {
-              loadedInputValues[iccid] = {};
-            }
-
-            if (item.inputValues && typeof item.inputValues === "object") {
-              Object.entries(item.inputValues).forEach(([date, hourValues]) => {
-                if (!loadedInputValues[iccid][date]) {
-                  loadedInputValues[iccid][date] = {};
-                }
-
-                if (hourValues && typeof hourValues === "object") {
-                  Object.entries(hourValues as Record<string, string>).forEach(
-                    ([hour, value]) => {
-                      if (
-                        !loadedInputValues[iccid][date][hour] ||
-                        loadedInputValues[iccid][date][hour] === ""
-                      ) {
-                        loadedInputValues[iccid][date][hour] = value;
-                      }
-                    },
-                  );
-                }
-              });
-            }
-          });
-        }
-      });
-
-      // Update states
-      setAllInputValues((prev) => ({
-        ...prev,
-        ...loadedInputValues,
-      }));
-
-      setAllCalculatedValues((prev) => ({
-        ...prev,
-        ...loadedPurpleValues,
-      }));
-
-      // Update current ICCID values
-      const normalizedCurrent = normalize(currentIccid);
-      const matchedInputKey = Object.keys(loadedInputValues).find(
-        (key) => normalize(key) === normalizedCurrent,
-      );
-
-      const matchedPurpleKey = Object.keys(loadedPurpleValues).find(
-        (key) => normalize(key) === normalizedCurrent,
-      );
-
-      if (matchedInputKey) {
-        setInputValues(loadedInputValues[matchedInputKey] || {});
-      } else {
-        setInputValues({});
-      }
-
-      if (matchedPurpleKey) {
-        setCalculatedValues(loadedPurpleValues[matchedPurpleKey] || {});
-      } else {
-        setCalculatedValues({});
-      }
-
-      // Enable save button if purple values exist
-      if (Object.keys(loadedPurpleValues).length > 0) {
-        setHasCalculated(true);
-      }
-    } catch (error) {
-      console.error("Error in fetchInputValues:", error);
-      setMessage(`Failed to fetch values: ${error}`);
-      setShow(true);
-      setSuccessful(false);
-    }
-  }, [id, currentIccid]);
-
-  // Fetch data on mount and when id or selectedDate changes
-  useEffect(() => {
-    fetchInputValues();
-  }, [id, selectedDate, fetchInputValues]);
-
-  // Update inputValues and calculatedValues when currentIccid changes
-  useEffect(() => {
-    const normalizedCurrent = normalize(currentIccid);
-    const matchedInputKey = Object.keys(allInputValues).find(
-      (key) => normalize(key) === normalizedCurrent,
-    );
-    const matchedPurpleKey = Object.keys(allCalculatedValues).find(
-      (key) => normalize(key) === normalizedCurrent,
-    );
-
-    if (matchedInputKey) {
-      setInputValues(allInputValues[matchedInputKey]);
-    } else {
-      setInputValues({});
-    }
-
-    if (matchedPurpleKey) {
-      setCalculatedValues(allCalculatedValues[matchedPurpleKey]);
-    } else {
-      setCalculatedValues({});
-    }
-  }, [currentIccid, allInputValues, allCalculatedValues]);
-
-  // Auto-show calculated values when purple values are loaded
-  useEffect(() => {
-    if (Object.keys(allCalculatedValues).length > 0 && !hasCalculated) {
-      setHasCalculated(true);
-    }
-  }, [allCalculatedValues, hasCalculated]);
 
   // Generate date-hour values mapping
   const dateToHourValues = iccidRuntimes.reduce(
@@ -557,8 +288,6 @@ const RuntimeTable = ({ iccidRuntimes, daterange }: RuntimeTableProps) => {
       // Run new audit report
       const auditdate = await runauditDateReport(id, dateToRequery, isdateLast);
 
-      // Refresh the data
-      await fetchInputValues();
 
       // Recalculate based on view mode
       if (viewMode === "single") {

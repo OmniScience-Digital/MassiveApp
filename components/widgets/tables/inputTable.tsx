@@ -83,16 +83,9 @@ export const InputTable = ({
     setHasCalculated,
     setMessage,
     setShow,
-    setSuccessful,
-    setLoadingBtn2,
-    setAllInputValues,
-    setInputValues,
-    setLastAction,
-    saveToHistory,
-    isSelectionActive,
-    setCellSelection,
-    setHistoryIndex,
+    setSuccessful, setLoadingBtn2, setAllInputValues, setInputValues, setLastAction, saveToHistory, isSelectionActive, setCellSelection, setHistoryIndex,
 }: InputTableProps) => {
+    
     const [open, setOpen] = useState(false);
     const [customPreset, setCustomPreset] = useState("");
     const [loadinbtn3, setLoadingBtn3] = useState(false);

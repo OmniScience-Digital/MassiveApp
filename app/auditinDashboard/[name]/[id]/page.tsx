@@ -49,6 +49,8 @@ const AuditingDashboard = () => {
     const [calculatedValues, setCalculatedValues] = useState<Record<string, Record<string, number>>>({});
     const [allCalculatedValues, setAllCalculatedValues] = useState<Record<string, Record<string, Record<string, number>>>>({});
     const [allInputValues, setAllInputValues] = useState<Record<string, Record<string, Record<string, string>>>>({});
+    const [dayTotals, setDayTotals] = useState<Record<string, number>>({});
+    const [allDayTotals, setAllDayTotals] = useState<Record<string, Record<string, number>>>({});
 
     //save start and end date
     const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
@@ -64,6 +66,7 @@ const AuditingDashboard = () => {
         setAllInputValues({});
         setHasCalculated(false);
     }, [id]);
+
 
     // Fetch all audit sites for navigation
     useEffect(() => {
@@ -388,7 +391,7 @@ const AuditingDashboard = () => {
                 }
             });
 
-         
+
             if (errors) {
                 console.error("Error fetching input values:", errors);
                 return [];
@@ -437,96 +440,102 @@ const AuditingDashboard = () => {
     };
 
     // Fetch purple figures values
-    const getPurpleTableValues = async (startTime: string, endTime: string) => {
+
+    const getPurpleTableValues = async (startTime: string, endTime: string): Promise<{
+        purpleValues: Record<string, Record<string, Record<string, number>>>;
+        dayTotals: Record<string, Record<string, number>>;
+    }> => {
         try {
             const startDate = startTime.split("T")[0];
             const endDate = endTime.split("T")[0];
 
-            const { data: purplevalues, errors } =
-                await client.models.purpleTable.listpurpleTableBySiteIdAndRowdate({
-                    siteId: id,
-                    rowdate: { between: [startDate, endDate] },
-                });
+            const { data: purplevalues, errors } = await client.models.purpleTable.list({
+                filter: {
+                    and: [
+                        { siteId: { eq: id } },
+                        { rowdate: { between: [startDate, endDate] } }
+                    ]
+                }
+            });
 
-                
-               if (errors||!purplevalues) {
-                console.error("Error fetching purplevalues values:", errors);
-                return [];
+            if (errors || !purplevalues) {
+                console.error("Error fetching purple values:", errors);
+                return { purpleValues: {}, dayTotals: {} };
             }
 
-              return purplevalues.map((purplevalue) => {
-                // Safe parsing function
-                const parsePurpleValues = (input: any): Record<string, string> => {
-                    try {
-                        let data: any;
+            const purpleValuesMap: Record<string, Record<string, Record<string, number>>> = {};
+            const dayTotalsMap: Record<string, Record<string, number>> = {};
 
-                        if (typeof input === "string") {
-                            data = JSON.parse(input);
-                        } else {
-                            data = input;
-                        }
+            purplevalues.forEach((purplevalue) => {
+                const iccid = purplevalue.iccid;
+                const date = purplevalue.rowdate;
 
-                        if (!data || typeof data !== "object" || Array.isArray(data)) {
-                            return {};
-                        }
+                if (!purpleValuesMap[iccid]) {
+                    purpleValuesMap[iccid] = {};
+                }
+                if (!purpleValuesMap[iccid][date]) {
+                    purpleValuesMap[iccid][date] = {};
+                }
 
-                        const result: Record<string, string> = {};
-                        for (const [key, value] of Object.entries(data)) {
-                            result[key] = value !== null && value !== undefined ? String(value) : "";
-                        }
+                // Initialize day totals
+                if (!dayTotalsMap[iccid]) {
+                    dayTotalsMap[iccid] = {};
+                }
 
-                        return result;
-                    } catch (error) {
-                        console.error("Error parsing inputValues:", error);
-                        return {};
+                // Parse purple values and convert to numbers
+                try {
+                    let parsedValues: any;
+                    if (typeof purplevalue.purpleValues === 'string') {
+                        parsedValues = JSON.parse(purplevalue.purpleValues);
+                    } else {
+                        parsedValues = purplevalue.purpleValues;
                     }
-                };
 
-                return {
-                    id: purplevalue.id,
-                    siteId: purplevalue.siteId,
-                    iccid: purplevalue.iccid,
-                    rowdate: purplevalue.rowdate,
-                    dayTotal: purplevalue.dayTotal,
-                    purpleValues: parsePurpleValues(purplevalue.purpleValues)
-                };
+                    if (parsedValues && typeof parsedValues === 'object') {
+                        Object.entries(parsedValues).forEach(([hour, value]) => {
+                            purpleValuesMap[iccid][date][hour] = parseFloat(value as string) || 0;
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error parsing purple values:", error);
+                }
+
+                // Store day total
+                dayTotalsMap[iccid][date] = parseFloat(purplevalue.dayTotal || "0") || 0;
             });
-       
-            
+
+            return { purpleValues: purpleValuesMap, dayTotals: dayTotalsMap };
+
         } catch (error) {
             console.error("Error in getPurpleTableValues:", error);
-            return [];
+            return { purpleValues: {}, dayTotals: {} };
         }
     };
-
 
     // Fetch input values and purple values
     const fetchInputValues = useCallback(async (startTime: string, endTime: string) => {
         try {
-            const [iccidInputValues, iccidPurpleValues] = await Promise.all([
+            const [iccidInputValues, purpleData] = await Promise.all([
                 getSiteTableValues(startTime, endTime),
                 getPurpleTableValues(startTime, endTime),
             ]);
 
-            console.log(iccidPurpleValues);
-
             const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
-          //  const loadedPurpleValues: Record<string, Record<string, Record<string, number>>> = iccidPurpleValues;
+            const loadedPurpleValues: Record<string, Record<string, Record<string, number>>> = purpleData.purpleValues;
+            const loadedDayTotals: Record<string, Record<string, number>> = purpleData.dayTotals;
 
             // Process input values correctly
             iccidInputValues.forEach((entry: any) => {
                 const iccid = entry.iccid;
-                const date = entry.rowdate; // Use rowdate instead of looking for date in nested structure
+                const date = entry.rowdate;
 
                 if (!loadedInputValues[iccid]) {
                     loadedInputValues[iccid] = {};
                 }
-
                 if (!loadedInputValues[iccid][date]) {
                     loadedInputValues[iccid][date] = {};
                 }
 
-                // Directly use the parsed inputValues
                 if (entry.inputValues && typeof entry.inputValues === "object") {
                     Object.entries(entry.inputValues).forEach(([hour, value]) => {
                         loadedInputValues[iccid][date][hour] = value as string;
@@ -534,40 +543,44 @@ const AuditingDashboard = () => {
                 }
             });
 
-            //update states
-            setAllInputValues((prev) => ({
-                ...prev,
-                ...loadedInputValues,
-            }));
-            // setAllCalculatedValues((prev) => ({
-            //     ...prev,
-            //     ...loadedPurpleValues,
-            // }));
-
+            // Update states
+            setAllInputValues(loadedInputValues);
+            setAllCalculatedValues(loadedPurpleValues);
+            setAllDayTotals(loadedDayTotals); // Add this line to set day totals
 
             // Update current ICCID values
             const normalizedCurrent = normalize(currentIccid);
             const matchedInputKey = Object.keys(loadedInputValues).find(
                 (key) => normalize(key) === normalizedCurrent
             );
-            // const matchedPurpleKey = Object.keys(loadedPurpleValues).find(
-            //     (key) => normalize(key) === normalizedCurrent,
-            // );
+            const matchedPurpleKey = Object.keys(loadedPurpleValues).find(
+                (key) => normalize(key) === normalizedCurrent
+            );
 
             if (matchedInputKey) {
                 setInputValues(loadedInputValues[matchedInputKey] || {});
             } else {
                 setInputValues({});
             }
-            // if (matchedPurpleKey) {
-            //     setCalculatedValues(loadedPurpleValues[matchedPurpleKey] || {});
-            // } else {
-            //     setCalculatedValues({});
-            // }
-            // // Enable save button if purple values exist
-            // if (Object.keys(loadedPurpleValues).length > 0) {
-            //     setHasCalculated(true);
-            // }
+
+            if (matchedPurpleKey) {
+                setCalculatedValues(loadedPurpleValues[matchedPurpleKey] || {});
+
+                // Also set day totals for current ICCID
+                const currentDayTotals: Record<string, number> = {};
+                Object.entries(loadedDayTotals[matchedPurpleKey] || {}).forEach(([date, total]) => {
+                    currentDayTotals[date] = total;
+                });
+                setDayTotals(currentDayTotals);
+            } else {
+                setCalculatedValues({});
+                setDayTotals({});
+            }
+
+            // Enable save button if purple values exist
+            if (Object.keys(loadedPurpleValues).length > 0) {
+                setHasCalculated(true);
+            }
 
         } catch (error) {
             console.error("Error in fetchInputValues:", error);
@@ -595,8 +608,16 @@ const AuditingDashboard = () => {
 
         if (matchedPurpleKey) {
             setCalculatedValues(allCalculatedValues[matchedPurpleKey]);
+
+            // Also update day totals for current ICCID
+            const currentDayTotals: Record<string, number> = {};
+            Object.entries(allDayTotals[matchedPurpleKey] || {}).forEach(([date, total]) => {
+                currentDayTotals[date] = total;
+            });
+            setDayTotals(currentDayTotals);
         } else {
             setCalculatedValues({});
+            setDayTotals({});
         }
     }, [currentIccid, allInputValues, allCalculatedValues]);
 
@@ -615,7 +636,7 @@ const AuditingDashboard = () => {
 
             if (!siteData) {
                 setSiteData(null);
-                return null; 
+                return null;
             }
 
             const validSites = siteData.filter(
@@ -630,13 +651,13 @@ const AuditingDashboard = () => {
                 ),
             );
             setAllIccids(allIccids);
-            
+
             // Update currentIccid only if it's not already set or if it's the first load
             if (currentIccidIndex === 0 || !currentIccid) {
                 const recentIccid = allIccids[0] || '';
                 setCurrentIccid(recentIccid);
             }
-            
+
             const hours = Array.from({ length: 24 }, (_, i) =>
                 i.toString().padStart(2, "0"),
             );
@@ -840,6 +861,10 @@ const AuditingDashboard = () => {
                         setInputValues={setInputValues}
                         setHasCalculated={setHasCalculated}
                         setCurrentIccidIndex={setCurrentIccidIndex}
+                        allDayTotals={allDayTotals}
+                        setAllDayTotals={setAllDayTotals}
+                        dayTotals={dayTotals}
+                        setDayTotals={setDayTotals}
                     />
 
                 )}

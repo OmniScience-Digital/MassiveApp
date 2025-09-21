@@ -1,89 +1,91 @@
 import { client } from "./schemaClient";
 
+    // Query existing records for this siteId and date range
+    // const { data: filteredRecords, errors: queryErrors } =
+    //   await client.models.purpleTable.listpurpleTableBySiteIdAndRowdate({
+    //     siteId,
+    //     rowdate: { between: [startdate, enddate] },
+    //   });
+
 export const createOrUpdatePurpleDaily = async (
-  siteId: string,
-  payload: {
-    data: Array<{
-      iccid: string;
-      purpleValues: Record<string, Record<string, string>>; // day -> hours
-    }>;
-  },
+  startdate: string,
+  enddate: string,
+  payload: Array<{
+    siteId: string;
+    iccid: string;
+    rowdate: string;
+    purpleValues: Record<string, string>;
+    dayTotal: string;
+  }>,
 ) => {
   try {
-    const { data } = payload;
+    if (!Array.isArray(payload)) throw new Error("Payload must be an array");
+    if (payload.length === 0) return [];
 
-    if (!Array.isArray(data)) {
-      throw new Error("Data must be an array");
-    }
+    const siteId = payload[0].siteId;
 
-    const promises: Promise<any>[] = [];
-
-    for (const entry of data) {
-      const { iccid, purpleValues } = entry;
-
-      for (const [date, hours] of Object.entries(purpleValues)) {
-        // Wrap each async operation in a promise
-        promises.push(
-          (async () => {
-            // Fetch existing records for the date
-            const { data: existingRecords, errors: queryErrors } =
-              await client.models.Purplefigures.listPurplefiguresByDate({
-                date,
-              });
-
-            if (queryErrors) throw queryErrors;
-
-            // Find matching row for siteId + iccid
-            const existingRow = existingRecords.find(
-              (item) => item.siteId === siteId && item.iccid === iccid,
-            );
-
-            if (existingRow) {
-              // Update existing row only if values actually change
-              const existingPurpleValues =
-                typeof existingRow.purpleValues === "string"
-                  ? JSON.parse(existingRow.purpleValues)
-                  : existingRow.purpleValues || {};
-
-              const { data: updated, errors: errors } =
-                await client.models.Purplefigures.update({
-                  id: existingRow.id,
-                  siteId: existingRow.siteId,
-                  date: existingRow.date,
-                  iccid: existingRow.iccid,
-                  purpleValues: JSON.stringify({
-                    ...existingPurpleValues,
-                    ...hours,
-                  }),
-                });
-
-              if (errors) throw errors;
-              return updated;
-            } else {
-              // Create new row
-              const { data: created, errors } =
-                await client.models.Purplefigures.create({
-                  siteId,
-                  iccid,
-                  date,
-                  purpleValues: JSON.stringify(hours),
-                });
-
-              if (errors) throw errors;
-              return created;
-            }
-          })(),
-        );
+    const { data: filteredRecords, errors: queryErrors } = await client.models.purpleTable.list({
+      filter: {
+        and: [
+          { siteId: { eq: siteId } },
+          { rowdate: { between: [startdate, enddate] } }
+        ]
       }
-    }
+    });
 
-    // Wait for all updates/creates to finish in parallel
-    const results = await Promise.all(promises);
+    if (queryErrors) throw queryErrors;
+
+    const results = await Promise.all(
+      payload.map(async ({ siteId, iccid, rowdate, purpleValues, dayTotal }) => {
+        const existingRecord = filteredRecords.find(
+          (record) => record.iccid === iccid && record.rowdate === rowdate
+        );
+
+        // Convert purpleValues to JSON string for API compatibility
+        const purpleValuesJson = JSON.stringify(purpleValues);
+
+        if (existingRecord) {
+          // Update existing record - merge purpleValues
+          const existingPurpleValues =
+            typeof existingRecord.purpleValues === "object" &&
+            existingRecord.purpleValues !== null &&
+            !Array.isArray(existingRecord.purpleValues)
+              ? (existingRecord.purpleValues as Record<string, string>)
+              : {};
+
+          const mergedPurpleValues = { ...existingPurpleValues, ...purpleValues };
+          const mergedPurpleValuesJson = JSON.stringify(mergedPurpleValues);
+
+          const { data: updated, errors } = await client.models.purpleTable.update({
+            id: existingRecord.id,
+            purpleValues: mergedPurpleValuesJson, // Pass as JSON string
+            dayTotal,
+          });
+
+          if (errors) throw errors;
+          return updated;
+        } else {
+          // Create new record
+          const { data: created, errors } = await client.models.purpleTable.create({
+            siteId,
+            iccid,
+            rowdate,
+            dayTotal,
+            purpleValues: purpleValuesJson, // Pass as JSON string
+          });
+
+          if (errors) throw errors;
+          return created;
+        }
+      })
+    );
+
     return results;
+
   } catch (error) {
     console.error("Operation failed:", {
       error,
-      inputSample: payload.data?.[0],
+      input: payload?.[0],
     });
     throw error;
   }

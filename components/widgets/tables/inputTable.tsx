@@ -22,8 +22,8 @@ interface InputTableProps {
     viewMode: "single" | "all";
     lastAction: "auto-fill" | "manual" | "preset" | "bulk";
     cellSelection: CellSelection;
-         startdate:string;
-    enddate:string;
+    startdate: string;
+    enddate: string;
     dates: string[];
     hours: string[];
     allIccids: string[];
@@ -37,6 +37,8 @@ interface InputTableProps {
     allCalculatedValues: Record<string, Record<string, Record<string, number>>>;
     allInputValues: Record<string, Record<string, Record<string, string>>>;
     history: Record<string, Record<string, string>>[];
+    allDayTotals: Record<string, Record<string, number>>;
+    dayTotals: Record<string, number>;
     handleCalculate: () => void;
     handleCalculateAll: () => void;
     setMessage: React.Dispatch<React.SetStateAction<string>>;
@@ -66,7 +68,7 @@ export const InputTable = ({
     id,
     currentIccid,
     viewMode,
-     startdate,
+    startdate,
     enddate,
     lastAction,
     cellSelection,
@@ -81,6 +83,8 @@ export const InputTable = ({
     loadinbtn,
     loadinbtn2,
     history,
+    allDayTotals,
+    dayTotals,
     handleCalculate,
     handleCalculateAll,
     setAutoFillMode,
@@ -89,7 +93,7 @@ export const InputTable = ({
     setShow,
     setSuccessful, setLoadingBtn2, setAllInputValues, setInputValues, setLastAction, saveToHistory, isSelectionActive, setCellSelection, setHistoryIndex,
 }: InputTableProps) => {
-    
+
     const [open, setOpen] = useState(false);
     const [customPreset, setCustomPreset] = useState("");
     const [loadinbtn3, setLoadingBtn3] = useState(false);
@@ -258,7 +262,7 @@ export const InputTable = ({
             setLoadingBtn2(true);
 
             // Save input values
-            await createOrUpdateInputValueTable(startdate,enddate,inputValuePayload);
+            await createOrUpdateInputValueTable(startdate, enddate, inputValuePayload);
 
             setMessage(`Input values saved successfully.`);
             setShow(true);
@@ -274,34 +278,31 @@ export const InputTable = ({
     };
 
     const handleSavePurpleToDB = async () => {
+
         try {
-            console.log('Called purple saving');
+
             // Prepare payload for purple figures
-            const purpleFigurePayload = {
-                data: allIccids.map((iccid) => ({
+            const purpleFigurePayload = Object.entries(allCalculatedValues).flatMap(([iccid, dateData]) =>
+                Object.entries(dateData).map(([rowdate, purpleValues]) => ({
+                    siteId: id,
                     iccid,
+                    rowdate,
                     purpleValues: Object.fromEntries(
-                        Object.entries(allCalculatedValues[iccid] || {}).map(
-                            ([date, hours]) => [
-                                date,
-                                Object.fromEntries(
-                                    Object.entries(hours).map(([hour, value]) => [
-                                        hour,
-                                        value.toString(),
-                                    ]),
-                                ),
-                            ],
-                        ),
+                        Object.entries(purpleValues).map(([hour, value]) => [
+                            hour,
+                            value.toString()
+                        ])
                     ),
-                })),
-            };
+                    dayTotal: (allDayTotals[iccid]?.[rowdate] || 0).toString()
+                }))
+            );
 
             setLoadingBtn3(true);
 
-            console.log(purpleFigurePayload)
 
             // Save both input values and purple figures
-           // await createOrUpdatePurpleDaily(id, purpleFigurePayload);
+            await createOrUpdatePurpleDaily(startdate, enddate, purpleFigurePayload);
+
 
             setMessage(`Purple figures saved successfully.`);
             setShow(true);
@@ -440,12 +441,14 @@ export const InputTable = ({
                             <Button
                                 onClick={() => handleSavePurpleToDB()}
                                 className="bg-purple-600 text-white"
-                                disabled={!hasCalculated} // Disable if not calculated
+                                disabled={!hasCalculated}
                             >
                                 <Save />
                                 Save Purple Figures to DB
                             </Button>
                         )}
+
+
                         <Button
                             onClick={
                                 viewMode === "single" ? handleCalculate : handleCalculateAll

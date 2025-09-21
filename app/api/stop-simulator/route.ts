@@ -17,7 +17,7 @@ export async function POST() {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        cache: "no-store", // always hit backend
+        cache: "no-store", 
       },
     );
 

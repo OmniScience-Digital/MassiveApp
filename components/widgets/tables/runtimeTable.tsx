@@ -22,6 +22,8 @@ interface RuntimeTableProps {
   allIccids: string[];
   currentIccid: string;
   daterange: datesAudit;
+  dayTotals: Record<string, number>;
+  allDayTotals: Record<string, Record<string, number>>;
   inputValues: Record<string, Record<string, string>>;
   allInputValues: Record<string, Record<string, Record<string, string>>>;
   calculatedValues: Record<string, Record<string, number>>;
@@ -31,11 +33,13 @@ interface RuntimeTableProps {
   setAllInputValues: React.Dispatch<React.SetStateAction<Record<string, Record<string, Record<string, string>>>>>;
   setInputValues: React.Dispatch<React.SetStateAction<Record<string, Record<string, string>>>>
   setHasCalculated: React.Dispatch<React.SetStateAction<boolean>>;
-  setCurrentIccidIndex: React.Dispatch<React.SetStateAction<number>>
+  setCurrentIccidIndex: React.Dispatch<React.SetStateAction<number>>;
+  setDayTotals: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  setAllDayTotals: React.Dispatch<React.SetStateAction<Record<string, Record<string, number>>>>
 
 }
 
-const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, daterange, allIccids, inputValues, allInputValues, calculatedValues, allCalculatedValues, currentIccidIndex, setAllCalculatedValues, setCalculatedValues, setAllInputValues, setInputValues, setHasCalculated, setCurrentIccidIndex }: RuntimeTableProps) => {
+const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, daterange, dayTotals, allIccids, inputValues, allInputValues, calculatedValues, allDayTotals, allCalculatedValues, currentIccidIndex, setDayTotals, setAllCalculatedValues, setCalculatedValues, setAllInputValues, setInputValues, setHasCalculated, setCurrentIccidIndex, setAllDayTotals }: RuntimeTableProps) => {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
   const dashboardname = decodeURIComponent(params.name as string).toUpperCase();
@@ -52,14 +56,10 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
   const [message, setMessage] = useState("");
 
   //purple figure componets 
-  const [dayTotals, setDayTotals] = useState<Record<string, number>>({});
+
   const [progressiveTotal, setProgressiveTotal] = useState(0);
-  const [allDayTotals, setAllDayTotals] = useState<Record<string, Record<string, number>>>({});
+
   const [allProgressiveTotals, setAllProgressiveTotals] = useState<Record<string, number>>({});
-
-
-
-
 
   const [autoFillMode, setAutoFillMode] = useState<
     "right" | "below" | "all" | null
@@ -516,7 +516,8 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
         id={id}
         startdate={daterange.startDate}
         enddate={daterange.endDate}
-
+        dayTotals={dayTotals}
+        allDayTotals={allDayTotals}
         loadinbtn2={loadinbtn2}
         loadinbtn={loadinbtn}
         hasCalculated={hasCalculated}

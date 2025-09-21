@@ -13,7 +13,7 @@ export async function GET() {
     const response = await fetch(
       `${constants.securebaseUrltest}/simulatorstatus`,
       {
-        cache: "no-store", // ensures we always hit the backend
+        cache: "no-store", 
       },
     );
 

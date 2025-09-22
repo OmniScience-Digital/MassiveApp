@@ -492,7 +492,7 @@ export const InputTable = ({
                                             onMouseEnter={() => handleCellMouseEnter(date, hour)}
                                         >
                                             <input
-                                                type="text"
+                                                type="number"
                                                 inputMode="decimal"
                                                 pattern="^[0-9]*[.,]?[0-9]*$"
                                                 value={inputValues[date]?.[hour] ?? ""}

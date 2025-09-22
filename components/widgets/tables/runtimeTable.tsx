@@ -224,6 +224,7 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
     hourlyValues: Record<string, Record<string, number>>,
     hours: string[]
   ): number => {
+
     // Sum hours from 06 to 23 for the current date
     const currentDaySum = hours
       .filter((hour) => hour >= "06")
@@ -240,10 +241,12 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
     return currentDaySum + nextDaySum;
   };
 
+
   const handleCalculate = () => {
+
     setLoadingBtn(true);
     const result: Record<string, Record<string, number>> = {};
-    const dayTotals: Record<string, number> = {}; // New object to store day totals
+    const blockdayTotals: Record<string, number> = {}; // New object to store day totals
 
     for (const date of dates) {
       result[date] = {};
@@ -267,6 +270,7 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
       const dayTotal = calculateDayTotal(date, dates, index, result, hours);
       newDayTotals[date] = dayTotal;
       newProgressiveTotal += dayTotal;
+      
     });
 
     setDayTotals(newDayTotals);
@@ -285,12 +289,17 @@ const RuntimeTable = ({ iccidRuntimes, hasCalculated, hours, currentIccid, dater
       ...prev,
       [currentIccid]: inputValues,
     }));
+    // also update the parent’s allDayTotals for this iccid
+    setAllDayTotals((prev) => ({
+      ...prev,
+      [currentIccid]: newDayTotals,
+    }));
 
     // Enable save button after calculation
     setHasCalculated(true);
     setLoadingBtn(false);
 
-    return { calculatedValues: result, dayTotals };
+    return { calculatedValues: result, blockdayTotals };
   };
 
   const handleCalculateAll = () => {

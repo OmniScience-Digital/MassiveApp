@@ -448,8 +448,9 @@ const AuditingDashboard = () => {
         try {
             const startDate = startTime.split("T")[0];
             const endDate = endTime.split("T")[0];
+            
 
-            const { data: purplevalues, errors } = await client.models.purpleTable.list({
+            const { data: purplevalues, errors } = await client.models.PurpleTable.list({
                 filter: {
                     and: [
                         { siteId: { eq: id } },
@@ -523,6 +524,8 @@ const AuditingDashboard = () => {
             const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
             const loadedPurpleValues: Record<string, Record<string, Record<string, number>>> = purpleData.purpleValues;
             const loadedDayTotals: Record<string, Record<string, number>> = purpleData.dayTotals;
+
+            console.log(loadedDayTotals);
 
             // Process input values correctly
             iccidInputValues.forEach((entry: any) => {

@@ -33,7 +33,7 @@ const schema = a.schema({
     ])
     .authorization((allow) => [allow.publicApiKey()]),
 
-    purpleTable: a
+    PurpleTable: a
     .model({
       siteId: a.string().required(),
       iccid: a.string().required(),

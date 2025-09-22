@@ -448,16 +448,14 @@ const AuditingDashboard = () => {
         try {
             const startDate = startTime.split("T")[0];
             const endDate = endTime.split("T")[0];
-            
 
-            const { data: purplevalues, errors } = await client.models.purpleTable.list({
-                filter: {
-                    and: [
-                        { siteId: { eq: id } },
-                        { rowdate: { between: [startDate, endDate] } }
-                    ]
+            const { data: purplevalues, errors } = await client.models.PurplefigureTable.listPurplefigureTableBySiteIdAndRowdate({
+                siteId: id,
+                rowdate: {
+                    between: [startDate, endDate],
                 }
             });
+
 
             if (errors || !purplevalues) {
                 console.error("Error fetching purple values:", errors);
@@ -524,8 +522,6 @@ const AuditingDashboard = () => {
             const loadedInputValues: Record<string, Record<string, Record<string, string>>> = {};
             const loadedPurpleValues: Record<string, Record<string, Record<string, number>>> = purpleData.purpleValues;
             const loadedDayTotals: Record<string, Record<string, number>> = purpleData.dayTotals;
-
-            console.log(loadedDayTotals);
 
             // Process input values correctly
             iccidInputValues.forEach((entry: any) => {

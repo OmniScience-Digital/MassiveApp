@@ -24,14 +24,12 @@ export const createOrUpdatePurpleDaily = async (
 
     const siteId = payload[0].siteId;
 
-    const { data: filteredRecords, errors: queryErrors } = await client.models.purpleTable.list({
-      filter: {
-        and: [
-          { siteId: { eq: siteId } },
-          { rowdate: { between: [startdate, enddate] } }
-        ]
-      }
-    });
+    const { data: filteredRecords, errors:queryErrors } = await client.models.PurplefigureTable.listPurplefigureTableBySiteIdAndRowdate({
+              siteId: siteId,
+              rowdate: {
+                  between: [startdate, enddate],
+              }
+          });
 
     if (queryErrors) throw queryErrors;
 
@@ -56,9 +54,9 @@ export const createOrUpdatePurpleDaily = async (
           const mergedPurpleValues = { ...existingPurpleValues, ...purpleValues };
           const mergedPurpleValuesJson = JSON.stringify(mergedPurpleValues);
 
-          const { data: updated, errors } = await client.models.purpleTable.update({
+          const { data: updated, errors } = await client.models.PurplefigureTable.update({
             id: existingRecord.id,
-            purpleValues: mergedPurpleValuesJson, // Pass as JSON string
+            purpleValues: mergedPurpleValuesJson, 
             dayTotal,
           });
 
@@ -66,7 +64,7 @@ export const createOrUpdatePurpleDaily = async (
           return updated;
         } else {
           // Create new record
-          const { data: created, errors } = await client.models.purpleTable.create({
+          const { data: created, errors } = await client.models.PurplefigureTable.create({
             siteId,
             iccid,
             rowdate,

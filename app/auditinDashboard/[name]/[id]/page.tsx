@@ -450,7 +450,7 @@ const AuditingDashboard = () => {
             const endDate = endTime.split("T")[0];
             
 
-            const { data: purplevalues, errors } = await client.models.PurpleTable.list({
+            const { data: purplevalues, errors } = await client.models.purpleTable.list({
                 filter: {
                     and: [
                         { siteId: { eq: id } },

@@ -33,7 +33,7 @@ const schema = a.schema({
     ])
     .authorization((allow) => [allow.publicApiKey()]),
 
-    PurpleTable: a
+    purpleTable: a
     .model({
       siteId: a.string().required(),
       iccid: a.string().required(),
@@ -46,6 +46,18 @@ const schema = a.schema({
     ])
     .authorization((allow) => [allow.publicApiKey()]),
 
+     PurplefigureTable: a
+    .model({
+      siteId: a.string().required(),
+      iccid: a.string().required(),
+      rowdate: a.date().required(),
+      purpleValues: a.json(), // { "00": "1", "01": "2", ..., "23": "3" }
+      dayTotal: a.string().required(),
+    })
+    .secondaryIndexes((index) => [
+      index("siteId").sortKeys(["rowdate"]),
+    ])
+    .authorization((allow) => [allow.publicApiKey()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

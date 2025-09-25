@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Sun, Moon, User, Settings, LogOut, Menu, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import Breadcrumbs from "./breadcrumbs";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -165,7 +166,7 @@ export default function Navbar() {
           </DropdownMenu>
         </div>
       </header>
-      
+       <Breadcrumbs />
       {isSigningOut && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
           <div className="flex items-center gap-2 p-4 bg-white dark:bg-gray-800 rounded-md shadow-md">

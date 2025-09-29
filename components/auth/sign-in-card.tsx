@@ -1,4 +1,6 @@
-import { useState } from "react";
+'use client';
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
@@ -14,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { SignInFlow } from "@/types/schema";
-import { signIn } from "aws-amplify/auth";
+import { getCurrentUser, signIn } from "aws-amplify/auth";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
@@ -34,6 +36,21 @@ export const SignInCard = ({ setState }: SignInCardProps) => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+useEffect(() => {
+  console.log("Checking auth status...");
+  
+  getCurrentUser()
+    .then((user) => {
+      console.log("User IS authenticated:", user);
+      console.log("Redirecting to /landing");
+      router.push("/landing");
+    })
+    .catch((error) => {
+      console.log("User is NOT authenticated:", error);
+      console.log("Staying on login page");
+    });
+}, [router]);
 
   const formik = useFormik({
     initialValues: {

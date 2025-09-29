@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const response = await fetch(
-      `${constants.baseUrl}/masstelegramshiftroute`,
+      `${constants.securebaseUrlprod}/masstelegramshiftroute`,
       {
         method: "POST",
         headers: {

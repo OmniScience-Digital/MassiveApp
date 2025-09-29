@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
+import ResponseModal from "../widgets/response";
 
-import { MassrunShiftReport } from "@/app/api/shiftreports.route";
 
 interface StopTimesState {
   dayStop: string[];
@@ -28,18 +28,36 @@ export function SiteControls({ stopTimes }: { stopTimes: StopTimesState }) {
   const [siteStatus, setSiteStatus] = useState<"test" | "prod">("test");
   const [isLoading, setIsLoading] = useState(false);
 
+  const [show, setShow] = useState(false);
+  const [successful, setSuccessful] = useState(false);
+  const [message, setMessage] = useState("");
+
   const handleRunReport = async () => {
     setIsLoading(true);
     try {
-      // simulate 2 min delay
-      await new Promise((resolve) => setTimeout(resolve, 2 * 60 * 1000));
+     
+      const payload = {
+        selectedTime: selectedTime as string,
+        reportType: reportType as string,
+        siteStatus: siteStatus as string,
+      };
 
-      await MassrunShiftReport(
-        selectedTime as string,
-        reportType as string,
-        siteStatus as string,
-      );
+      const res = await fetch("/api/mass-shiftrun", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      setMessage(result.message || "Reports sent successfully!");
+      setShow(true);
+      setSuccessful(res.ok);
+
+
     } catch (error) {
+      setMessage("Error sending CSV: " + error);
+      setShow(true);
+      setSuccessful(false);
       console.log(error);
     } finally {
       setIsLoading(false);
@@ -188,6 +206,14 @@ export function SiteControls({ stopTimes }: { stopTimes: StopTimesState }) {
           {siteStatus}
         </Badge>
       </div>
+
+      {show && (
+        <ResponseModal
+          successful={successful}
+          message={message}
+          setShow={setShow}
+        />
+      )}
     </div>
   );
 }

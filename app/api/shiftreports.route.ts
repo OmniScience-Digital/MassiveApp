@@ -62,36 +62,3 @@ export const runtelegramReportwithDate = async (
   }
 };
 
-export const MassrunShiftReport = async (
-  selectedTime: string,
-  reportType: string,
-  siteStatus: string,
-) => {
-  try {
-    const response = await fetch(
-      `${constants.securebaseUrlprod}/masstelegramshiftroute`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          stoptime: selectedTime,
-          shift: reportType.trim(),
-          siteStatus: siteStatus.trim(),
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(`Request failed with status: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    return data;
-  } catch (error) {
-    console.error("Error:", error);
-    throw error;
-  }
-};

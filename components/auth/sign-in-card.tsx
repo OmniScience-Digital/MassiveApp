@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { SignInFlow } from "@/types/schema";
-import { getCurrentUser, signIn } from "aws-amplify/auth";
+import { getCurrentUser, signIn, signInWithRedirect } from "aws-amplify/auth";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
@@ -37,20 +37,20 @@ export const SignInCard = ({ setState }: SignInCardProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-useEffect(() => {
-  console.log("Checking auth status...");
-  
-  getCurrentUser()
-    .then((user) => {
-      console.log("User IS authenticated:", user);
-      console.log("Redirecting to /landing");
-      router.push("/landing");
-    })
-    .catch((error) => {
-      console.log("User is NOT authenticated:", error);
-      console.log("Staying on login page");
-    });
-}, [router]);
+  useEffect(() => {
+    console.log("Checking auth status...");
+
+    getCurrentUser()
+      .then((user) => {
+        console.log("User IS authenticated:", user);
+        console.log("Redirecting to /landing");
+        router.push("/landing");
+      })
+      .catch((error) => {
+        console.log("User is NOT authenticated:", error);
+        console.log("Staying on login page");
+      });
+  }, [router]);
 
 
 
@@ -88,9 +88,23 @@ useEffect(() => {
     },
   });
 
-  const handleGoogleSignIn = async () => {
-    console.log("Google sign-in clicked");
-  };
+const handleGoogleSignIn = async () => {
+  console.log("Google sign-in clicked");
+  try {
+    await signInWithRedirect({ 
+      provider: 'Google' 
+    });
+  } catch (error) {
+    console.error('Error signing in with Google:', error);
+    // Handle specific error cases
+    if (error instanceof Error && error.message.includes('oauth')) {
+      console.error('OAuth not configured. Make sure:');
+      console.error('1. Your auth resource is properly configured in amplify/auth/resource.ts');
+      console.error('2. You have deployed with `ampx sandbox`');
+      console.error('3. Your amplify_outputs.json contains oauth configuration');
+    }
+  }
+};
 
   return (
     <Card className="w-full h-full px-8 py-6">
@@ -191,6 +205,18 @@ useEffect(() => {
             <FcGoogle className="size-5 absolute top-3 left-2.5" />
             Continue with Google
           </Button>
+
+          {/* <Button
+            id="googleSignInButton"
+            onClick={handleGoogleSignIn}
+            variant="outline"
+            size="lg"
+            className="w-full relative"
+          >
+            <FcGoogle className="size-5 absolute top-3 left-2.5" />
+            Continue with Google
+          </Button> */}
+
         </div>
 
         <div className="flex justify-between items-center">

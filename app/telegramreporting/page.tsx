@@ -43,10 +43,10 @@ const Automatedreporting = () => {
     extraStop: [],
   });
 
-  // listsites function
+  // listsites function - returns subscription
   function listsites() {
     setLoading(true);
-    client.models.Sites.observeQuery().subscribe({
+    return client.models.Sites.observeQuery().subscribe({
       next: (data) => {
         const sites = data.items
           .map((report) => {
@@ -70,10 +70,17 @@ const Automatedreporting = () => {
   }
 
   useEffect(() => {
-    listsites();
+    const subscription = listsites();
+
+    // Cleanup function - unsubscribe when component unmounts
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
-  useEffect(() => {}, [stopTimes]); // This will run whenever stopTimes changes
+  useEffect(() => { }, [stopTimes]); // This will run whenever stopTimes changes
 
   useEffect(() => {
     if (submittedsites.length > 0) {
@@ -442,21 +449,21 @@ const Automatedreporting = () => {
 
   const data = Array.isArray(submittedsites)
     ? submittedsites.map((site) => {
-        const input = site.siteConstants || {};
-        const site_time = site.siteTimes || {};
+      const input = site.siteConstants || {};
+      const site_time = site.siteTimes || {};
 
-        return {
-          id: site.id || "",
-          sitename: input.siteName || "",
-          monthStart: site_time.monthstart || "",
-          siteStatus: site.siteStatus || "",
-          edit: <EditIcon id={site.id} key={`edit-${site.id}`} />,
-          manage: <Trash2 id={site.id} key={`delete-${site.id}`} />,
-          audit: checkedItems[site.id] || false, // Use the checkedItems state
-          progressive: checkedItemsProgressive[site.id] || false, // Use the checkedItemsProgressive state
-          hourly: checkedItemsHourly[site.id] || false, // Use the checkedItemsHourly state
-        };
-      })
+      return {
+        id: site.id || "",
+        sitename: input.siteName || "",
+        monthStart: site_time.monthstart || "",
+        siteStatus: site.siteStatus || "",
+        edit: <EditIcon id={site.id} key={`edit-${site.id}`} />,
+        manage: <Trash2 id={site.id} key={`delete-${site.id}`} />,
+        audit: checkedItems[site.id] || false, // Use the checkedItems state
+        progressive: checkedItemsProgressive[site.id] || false, // Use the checkedItemsProgressive state
+        hourly: checkedItemsHourly[site.id] || false, // Use the checkedItemsHourly state
+      };
+    })
     : [];
 
   return (

@@ -28,7 +28,7 @@ const ProgressiveReporting = () => {
 
   function listsites() {
     setLoading(true);
-    client.models.Sites.observeQuery().subscribe({
+    return client.models.Sites.observeQuery().subscribe({
       next: (data) => {
         const sites = data.items
           .map((report) => {
@@ -50,7 +50,14 @@ const ProgressiveReporting = () => {
   }
 
   useEffect(() => {
-    listsites();
+    const subscription = listsites();
+
+    // Cleanup function - unsubscribe when component unmounts
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const redirectToDashboard = (name: string, id: string) => {

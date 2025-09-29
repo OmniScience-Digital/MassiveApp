@@ -1,11 +1,6 @@
 import * as constants from "@/app/constants";
 import { ReportItem } from "@/types/schema";
 
-//baseUrlprod
-//baseUrl
-//securebaseUrlprod
-//securebaseUrltest
-
 export const runStockpileReport = async (
   sitedata: ReportItem,
   params: { startTime: string; endTime: string },
@@ -18,7 +13,7 @@ export const runStockpileReport = async (
       reqstockpileNumber = "";
     }
 
-    const response = await fetch(`${constants.securebaseUrltest}/stockpile`, {
+    const response = await fetch(`${constants.securebaseUrlprod}/stockpile`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,11 +1,6 @@
 import * as constants from "@/app/constants";
 import { ReportItem } from "@/types/schema";
 
-//baseUrlprod
-//baseUrl
-//securebaseUrlprod
-//securebaseUrltest
-
 export const runprogressiveShiftReport = async (
   sitedata: ReportItem,
   params: { startTime: string; endTime: string },

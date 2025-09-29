@@ -1,10 +1,6 @@
 import * as constants from "@/app/constants";
 import { NextRequest, NextResponse } from "next/server";
 
-//baseUrlprod
-//baseUrl
-//securebaseUrlprod
-//securebaseUrltest
 
 export async function POST(request: NextRequest) {
   try {

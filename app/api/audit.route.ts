@@ -1,10 +1,4 @@
 import * as constants from "@/app/constants";
-import { ReportItem } from "@/types/schema";
-
-//baseUrlprod
-//baseUrl
-//securebaseUrlprod
-//securebaseUrltest
 
 const getPreviousDateFormatted = (now: string) => {
   const prevDate = new Date(now);
@@ -21,7 +15,7 @@ export const runauditDateReport = async (
   try {
     const prevDate = getPreviousDateFormatted(date);
     const response = await fetch(
-      `${constants.securebaseUrltest}/auditdateroute`,
+      `${constants.securebaseUrlprod}/auditdateroute`,
       {
         method: "POST",
         headers: {

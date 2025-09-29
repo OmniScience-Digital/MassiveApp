@@ -1,15 +1,10 @@
 import * as constants from "@/app/constants";
 import { ReportItem } from "@/types/schema";
 
-//baseUrlprod
-//baseUrl
-//securebaseUrlprod
-//securebaseUrltest
-
 export const runShiftReport = async (sitedata: ReportItem, shift: string) => {
   try {
     const response = await fetch(
-      `${constants.securebaseUrltest}/telegramshiftroute`,
+      `${constants.securebaseUrlprod}/telegramshiftroute`,
       {
         method: "POST",
         headers: {
@@ -40,10 +35,9 @@ export const runtelegramReportwithDate = async (
   params: { startTime: string; endTime: string; shift: string },
 ) => {
   try {
-    console.log(params);
 
     const response = await fetch(
-      `${constants.securebaseUrltest}/runtelegramReportwithDate`,
+      `${constants.securebaseUrlprod}/runtelegramReportwithDate`,
       {
         method: "POST",
         headers: {
@@ -75,7 +69,7 @@ export const MassrunShiftReport = async (
 ) => {
   try {
     const response = await fetch(
-      `${constants.securebaseUrltest}/masstelegramshiftroute`,
+      `${constants.securebaseUrlprod}/masstelegramshiftroute`,
       {
         method: "POST",
         headers: {

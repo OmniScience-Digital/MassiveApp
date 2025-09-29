@@ -19,7 +19,7 @@ const Auditor = () => {
   // listsites function
   function listsites() {
     setLoading(true);
-    client.models.Sites.observeQuery().subscribe({
+    return client.models.Sites.observeQuery().subscribe({
       next: (data) => {
         const sites = data.items
           .map((report) => {
@@ -41,9 +41,16 @@ const Auditor = () => {
   }
 
   useEffect(() => {
-    listsites();
-  }, []);
+    const subscription = listsites();
 
+    // Cleanup function - unsubscribe when component unmounts
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
+  }, []);
+  
   // Redirect to dashboard
   const redirectToDashboard = (name: string, id: string) => {
     router.push(`/auditinDashboard/${name}/${id}`);
@@ -117,18 +124,18 @@ const Auditor = () => {
 
   const data = Array.isArray(submittedsites)
     ? submittedsites.map((site) => {
-        const input = site.siteConstants || {};
-        const site_time = site.siteTimes || {};
+      const input = site.siteConstants || {};
+      const site_time = site.siteTimes || {};
 
-        return {
-          id: site.id || "",
-          sitename: input.siteName || "",
-          monthStart: site_time.monthstart || "",
-          dayStop: site_time.dayStop || "",
-          nightStop: site_time.nightStop || "",
-          edit: <EditIcon id={site.id} key={`edit-${site.id}`} />,
-        };
-      })
+      return {
+        id: site.id || "",
+        sitename: input.siteName || "",
+        monthStart: site_time.monthstart || "",
+        dayStop: site_time.dayStop || "",
+        nightStop: site_time.nightStop || "",
+        edit: <EditIcon id={site.id} key={`edit-${site.id}`} />,
+      };
+    })
     : [];
 
   return (

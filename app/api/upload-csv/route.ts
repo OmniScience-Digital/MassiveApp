@@ -38,7 +38,7 @@ async function processWithChunking(body: any) {
 
    const startRowIndex = body.rows.findIndex((row: string[]) => 
     row[1] === "1" || row[1] === "1.00"  // Start Flag is at index 1 so we add 1 to eliminate rows
-  )+ 1;
+  );
 
   body.startRowIndex=startRowIndex;
   

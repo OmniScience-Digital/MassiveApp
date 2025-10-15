@@ -38,17 +38,15 @@ export const SignInCard = ({ setState }: SignInCardProps) => {
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    console.log("Checking auth status...");
 
     getCurrentUser()
       .then((user) => {
-        console.log("User IS authenticated:", user);
-        console.log("Redirecting to /landing");
+
         router.push("/landing");
       })
       .catch((error) => {
         console.log("User is NOT authenticated:", error);
-        console.log("Staying on login page");
+        
       });
   }, [router]);
 
@@ -90,18 +88,36 @@ export const SignInCard = ({ setState }: SignInCardProps) => {
 
 const handleGoogleSignIn = async () => {
   console.log("Google sign-in clicked");
+  setError(null);
+  
   try {
+    console.log("Initiating Google OAuth flow...");
+    
+    // Use the provider configuration directly
     await signInWithRedirect({ 
       provider: 'Google' 
     });
+    
+    // The redirect should happen automatically
+    console.log("Redirect initiated to OAuth provider");
+    
   } catch (error) {
     console.error('Error signing in with Google:', error);
-    // Handle specific error cases
-    if (error instanceof Error && error.message.includes('oauth')) {
-      console.error('OAuth not configured. Make sure:');
-      console.error('1. Your auth resource is properly configured in amplify/auth/resource.ts');
-      console.error('2. You have deployed with `ampx sandbox`');
-      console.error('3. Your amplify_outputs.json contains oauth configuration');
+    
+    // More detailed error handling
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      if (error.message.includes('oauth') || error.message.includes('redirect')) {
+        setError('OAuth configuration issue. Please check your Amplify setup.');
+        console.error('OAuth configuration problem detected');
+      } else {
+        setError(`Sign-in failed: ${error.message}`);
+      }
+    } else {
+      setError('An unexpected error occurred during Google sign-in');
     }
   }
 };
@@ -195,7 +211,7 @@ const handleGoogleSignIn = async () => {
         <div className="flex flex-col gap-y-2.5">
           <Button
             id="googleSignInButton"
-            // disabled={isSubmitting || isSuccess}
+             //disabled={isSubmitting || isSuccess}
             disabled={true}
             onClick={handleGoogleSignIn}
             variant="outline"

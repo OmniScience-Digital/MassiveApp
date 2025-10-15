@@ -35,6 +35,13 @@ interface SimulationStatus {
   nextReset: string;
 }
 
+interface UploadProgress {
+  currentChunk: number;
+  totalChunks: number;
+  percentage: number;
+  status: string;
+}
+
 const SiteSimulator = () => {
   const [csvData, setCsvData] = useState<CSVData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +51,7 @@ const SiteSimulator = () => {
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState("");
   const [connectionError, setConnectionError] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Clear status when component mounts to prevent stale data
@@ -80,12 +88,20 @@ const SiteSimulator = () => {
     setConnectionError(false);
     setMessage(" ");
     setShow(false);
+    setUploadProgress(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const sendToBackend = async () => {
     if (!csvData) return;
     setIsSending(true);
+    setUploadProgress({
+      currentChunk: 0,
+      totalChunks: 0,
+      percentage: 0,
+      status: "Starting upload..."
+    });
+    
     try {
       const payload = {
         filename: fileInputRef.current?.files?.[0]?.name || "uploaded.csv",
@@ -95,21 +111,38 @@ const SiteSimulator = () => {
         totalRows: csvData.rows.length,
         totalColumns: csvData.headers.length,
       };
+      //await clear current 
+      const clear = await fetch("/api/stop-simulator", { method: "POST" });
+      
+      //then upload new to avoid apppending many row
       const res = await fetch("/api/upload-csv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      
       const result = await res.json();
-      setMessage(result.message || "CSV sent successfully!");
+      
+      if (result.success) {
+        if (result.data?.totalChunks > 1) {
+          setMessage(`Success! Processed ${result.data.rowsProcessed} rows in ${result.data.totalChunks} chunks`);
+        } else {
+          setMessage("CSV processed successfully!");
+        }
+      } else {
+        setMessage(result.error || "Failed to process CSV");
+      }
+      
       setShow(true);
       setSuccessful(res.ok);
+      
     } catch (error) {
       setMessage("Error sending CSV: " + error);
       setShow(true);
       setSuccessful(false);
     } finally {
       setIsSending(false);
+      setUploadProgress(null);
     }
   };
 
@@ -123,8 +156,7 @@ const SiteSimulator = () => {
       }
 
       const result = await res.json();
-      console.log;
-
+      
       if (result.success) {
         setStatus(result.data);
       } else {
@@ -187,6 +219,36 @@ const SiteSimulator = () => {
                 </div>
               )}
 
+              {/* Upload Progress Bar */}
+              {uploadProgress && (
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm font-medium text-blue-700">
+                      {uploadProgress.status}
+                    </span>
+                    <span className="text-sm text-blue-700">
+                      {uploadProgress.percentage}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress.percentage}%` }}
+                    ></div>
+                  </div>
+                  {uploadProgress.totalChunks > 0 && (
+                    <div className="mt-2 text-xs text-blue-600">
+                      Processing chunk {uploadProgress.currentChunk} of {uploadProgress.totalChunks}
+                      {csvData && (
+                        <span className="ml-2">
+                          (Total: {csvData.rows.length.toLocaleString()} rows)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-2 mb-4 flex-wrap">
                 <Button
                   onClick={() => fileInputRef.current?.click()}
@@ -220,7 +282,6 @@ const SiteSimulator = () => {
                 <Button
                   onClick={stopSimulation}
                   variant="destructive"
-                  disabled={!status?.isRunning}
                 >
                   Stop Simulator
                 </Button>

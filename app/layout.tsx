@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="en" className={oswald.className}>
       <body className={oswald.className}>
         <ConfigureAmplify />
-           <OAuthListener />
+           
         {children}
       </body>
     </html>

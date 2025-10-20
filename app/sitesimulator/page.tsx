@@ -92,59 +92,113 @@ const SiteSimulator = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // const sendToBackend = async () => {
+  //   if (!csvData) return;
+  //   setIsSending(true);
+  //   setUploadProgress({
+  //     currentChunk: 0,
+  //     totalChunks: 0,
+  //     percentage: 0,
+  //     status: "Starting upload..."
+  //   });
+    
+  //   try {
+  //     const payload = {
+  //       filename: fileInputRef.current?.files?.[0]?.name || "uploaded.csv",
+  //       headers: csvData.headers,
+  //       rows: csvData.rows,
+  //       rawData: csvData.rawData,
+  //       totalRows: csvData.rows.length,
+  //       totalColumns: csvData.headers.length,
+  //     };
+  //     //await clear current 
+  //     const clear = await fetch("/api/stop-simulator", { method: "POST" });
+      
+  //     //then upload new to avoid apppending many row
+  //     const res = await fetch("/api/upload-csv", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify(payload),
+  //     });
+      
+  //     const result = await res.json();
+      
+  //     if (result.success) {
+  //       if (result.data?.totalChunks > 1) {
+  //         setMessage(`Success! Processed ${result.data.rowsProcessed} rows in ${result.data.totalChunks} chunks`);
+  //       } else {
+  //         setMessage("CSV processed successfully!");
+  //       }
+  //     } else {
+  //       setMessage(result.error || "Failed to process CSV");
+  //     }
+      
+  //     setShow(true);
+  //     setSuccessful(res.ok);
+      
+  //   } catch (error) {
+  //     setMessage("Error sending CSV: " + error);
+  //     setShow(true);
+  //     setSuccessful(false);
+  //   } finally {
+  //     setIsSending(false);
+  //     setUploadProgress(null);
+  //   }
+  // };
+
   const sendToBackend = async () => {
-    if (!csvData) return;
-    setIsSending(true);
-    setUploadProgress({
-      currentChunk: 0,
-      totalChunks: 0,
-      percentage: 0,
-      status: "Starting upload..."
+  if (!csvData) return;
+  setIsSending(true);
+  setUploadProgress({
+    currentChunk: 0,
+    totalChunks: 0,
+    percentage: 0,
+    status: "Starting upload..."
+  });
+  
+  try {
+    // Create FormData instead of JSON payload
+    const formData = new FormData();
+    formData.append('filename', fileInputRef.current?.files?.[0]?.name || "uploaded.csv");
+    formData.append('headers', JSON.stringify(csvData.headers));
+    formData.append('rows', JSON.stringify(csvData.rows));
+    formData.append('rawData', JSON.stringify(csvData.rawData || ''));
+    formData.append('totalRows', csvData.rows.length.toString());
+    formData.append('totalColumns', csvData.headers.length.toString());
+
+    // Clear current simulation
+    const clear = await fetch("/api/stop-simulator", { method: "POST" });
+    
+    // Upload using FormData (no Content-Type header - let browser set it)
+    const res = await fetch("/api/upload-csv", {
+      method: "POST",
+      body: formData, // Remove Content-Type header for FormData
     });
     
-    try {
-      const payload = {
-        filename: fileInputRef.current?.files?.[0]?.name || "uploaded.csv",
-        headers: csvData.headers,
-        rows: csvData.rows,
-        rawData: csvData.rawData,
-        totalRows: csvData.rows.length,
-        totalColumns: csvData.headers.length,
-      };
-      //await clear current 
-      const clear = await fetch("/api/stop-simulator", { method: "POST" });
-      
-      //then upload new to avoid apppending many row
-      const res = await fetch("/api/upload-csv", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      
-      const result = await res.json();
-      
-      if (result.success) {
-        if (result.data?.totalChunks > 1) {
-          setMessage(`Success! Processed ${result.data.rowsProcessed} rows in ${result.data.totalChunks} chunks`);
-        } else {
-          setMessage("CSV processed successfully!");
-        }
+    const result = await res.json();
+    
+    if (result.success) {
+      if (result.data?.totalChunks > 1) {
+        setMessage(`Success! Processed ${result.data.rowsProcessed} rows in ${result.data.totalChunks} chunks`);
       } else {
-        setMessage(result.error || "Failed to process CSV");
+        setMessage("CSV processed successfully!");
       }
-      
-      setShow(true);
-      setSuccessful(res.ok);
-      
-    } catch (error) {
-      setMessage("Error sending CSV: " + error);
-      setShow(true);
-      setSuccessful(false);
-    } finally {
-      setIsSending(false);
-      setUploadProgress(null);
+    } else {
+      setMessage(result.error || "Failed to process CSV");
     }
-  };
+    
+    setShow(true);
+    setSuccessful(res.ok);
+    
+  } catch (error) {
+    setMessage("Error sending CSV: " + error);
+    setShow(true);
+    setSuccessful(false);
+  } finally {
+    setIsSending(false);
+    setUploadProgress(null);
+  }
+};
 
   const fetchStatus = async () => {
     try {

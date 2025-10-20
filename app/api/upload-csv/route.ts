@@ -1,23 +1,54 @@
 // app/api/upload-csv/route.ts
 import * as constants from "@/app/constants";
+import { formidable } from 'formidable';
 import { NextRequest, NextResponse } from "next/server";
 
+
 const MAX_ROWS_PER_CHUNK = 2500; // Conservative limit
+const MAX_PAYLOAD_SIZE = 9.5 * 1024 * 1024; // 9.5MB (Amplify limit is ~10MB)
+
+// Helper function to calculate payload size
+function calculatePayloadSize(payload: any): number {
+  return new TextEncoder().encode(JSON.stringify(payload)).length;
+}
+
+function formatBytes(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(2)} MB`;
+}
+
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Convert NextRequest to a format formidable can use
+    const formData = await request.formData();
+    
+    // Extract data from FormData
+    const filename = formData.get('filename') as string;
+    const headers = JSON.parse(formData.get('headers') as string || '[]');
+    const rows = JSON.parse(formData.get('rows') as string || '[]');
+    const rawData = formData.get('rawData') as string;
+    const totalRows = parseInt(formData.get('totalRows') as string || '0');
+    const totalColumns = parseInt(formData.get('totalColumns') as string || '0');
 
-    // Validate required fields
-    if (!body.filename || !body.headers || !body.rows) {
+    console.log(`Received CSV: ${filename}, ${rows.length} rows, ${headers.length} columns`);
+
+    if (!filename || !headers || !rows) {
       return NextResponse.json(
-        { error: "Missing required fields: filename, headers, or rows" },
+        { error: "Missing required fields" },
         { status: 400 },
       );
     }
 
     // Process with chunking
-    const result = await processWithChunking(body);
+    const result = await processWithChunking({ 
+      filename, 
+      headers, 
+      rows, 
+      rawData, 
+      totalRows, 
+      totalColumns 
+    });
     return NextResponse.json(result);
 
   } catch (error) {
@@ -32,18 +63,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
+
+
 async function processWithChunking(body: any) {
   const totalRows = body.rows.length;
   const totalChunks = Math.ceil(totalRows / MAX_ROWS_PER_CHUNK);
 
-   const startRowIndex = body.rows.findIndex((row: string[]) => 
-    row[1] === "1" || row[1] === "1.00"  // Start Flag is at index 1 so we add 1 to eliminate rows
+  const startRowIndex = body.rows.findIndex((row: string[]) => 
+    row[1] === "1" || row[1] === "1.00"
   );
 
-  body.startRowIndex=startRowIndex;
+  body.startRowIndex = startRowIndex;
   
   console.log(`Start row index found: ${startRowIndex}`);
   console.log(`Processing ${totalRows} rows in ${totalChunks} chunks`);
+  console.log(`Columns: ${body.headers.length}`);
 
   // If it's a small file, process in one go
   if (totalChunks === 1) {
@@ -52,7 +86,6 @@ async function processWithChunking(body: any) {
       success: true,
       message: "CSV data processed successfully",
       data: {
-
         rowsReceived: totalRows,
         columns: body.headers.length,
         filename: body.filename,
@@ -117,46 +150,11 @@ async function processWithChunking(body: any) {
   };
 }
 
-// async function processSingleChunk(chunkData: any, chunkIndex = 0) {
-//   const payload = {
-//     startRowIndex:chunkData.startRowIndex,
-//     totalRows: chunkData.totalRows,
-//     totalColumns: chunkData.totalColumns,
-//     headers: chunkData.headers,
-//     rows: chunkData.rows,
-//     chunkInfo: chunkData.rows.length < chunkData.totalRows ? {
-//       chunkIndex,
-//       isChunked: true,
-//       chunkRows: chunkData.rows.length,
-//       totalChunks: Math.ceil(chunkData.totalRows / MAX_ROWS_PER_CHUNK)
-//     } : undefined
-//   };
-
-//   const response = await fetch(
-//     `${constants.securebaseUrltest}/sitesimulator`,
-//     {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify(payload),
-//     },
-//   );
-
-//   if (!response.ok) {
-//     const errorText = await response.text();
-//     throw new Error(`External API returned ${response.status}: ${errorText}`);
-//   }
-
-//   return await response.json();
-// }
-
-
 async function processSingleChunk(chunkData: any, chunkIndex = 0) {
   const payload = {
     startRowIndex: chunkData.startRowIndex,
-    totalRows: chunkData.rows.length, // Fixed: should be chunkData.rows.length, not totalRows
-    totalColumns: chunkData.headers.length, // Fixed: should be headers length
+    totalRows: chunkData.rows.length,
+    totalColumns: chunkData.headers.length,
     headers: chunkData.headers,
     rows: chunkData.rows,
     chunkInfo: chunkData.rows.length < chunkData.totalRows ? {
@@ -167,10 +165,19 @@ async function processSingleChunk(chunkData: any, chunkIndex = 0) {
     } : undefined
   };
 
+  // Calculate and log payload size
+  const payloadSize = calculatePayloadSize(payload);
+  console.log(`Chunk ${chunkIndex} payload size: ${formatBytes(payloadSize)}`);
+
+  if (payloadSize > MAX_PAYLOAD_SIZE) {
+    throw new Error(`Chunk ${chunkIndex} payload too large: ${formatBytes(payloadSize)} > ${formatBytes(MAX_PAYLOAD_SIZE)}`);
+  }
+
   console.log(`Sending chunk ${chunkIndex} to backend:`, {
     url: `${constants.securebaseUrltest}/sitesimulator`,
     rows: payload.rows.length,
-    headers: payload.headers.length
+    headers: payload.headers.length,
+    size: formatBytes(payloadSize)
   });
 
   try {
@@ -191,22 +198,7 @@ async function processSingleChunk(chunkData: any, chunkIndex = 0) {
       throw new Error(`External API returned ${response.status}: ${errorText}`);
     }
 
-    // Get the response as text first
-    const responseText = await response.text();
-    console.log(`Backend response for chunk ${chunkIndex}:`, responseText);
-
-    // Check if response is empty
-    if (!responseText) {
-      throw new Error('Backend returned empty response');
-    }
-
-    // Try to parse JSON
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`External API returned ${response.status}: ${errorText}`);
-  }
-
-  return await response.json();
+    return await response.json();
 
   } catch (error) {
     console.error(`Network error for chunk ${chunkIndex}:`, error);

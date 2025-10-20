@@ -146,8 +146,8 @@ const SiteSimulator = () => {
   //   }
   // };
 
-  const sendToBackend = async () => {
-  if (!csvData) return;
+const sendToBackend = async () => {
+  if (!csvData || !fileInputRef.current?.files?.[0]) return;
   setIsSending(true);
   setUploadProgress({
     currentChunk: 0,
@@ -157,22 +157,19 @@ const SiteSimulator = () => {
   });
   
   try {
-    // Create FormData instead of JSON payload
+    // Create FormData with the actual CSV file
     const formData = new FormData();
-    formData.append('filename', fileInputRef.current?.files?.[0]?.name || "uploaded.csv");
+    formData.append('csvFile', fileInputRef.current.files[0]); // Append the actual file
     formData.append('headers', JSON.stringify(csvData.headers));
-    formData.append('rows', JSON.stringify(csvData.rows));
-    formData.append('rawData', JSON.stringify(csvData.rawData || ''));
-    formData.append('totalRows', csvData.rows.length.toString());
-    formData.append('totalColumns', csvData.headers.length.toString());
+    formData.append('filename', fileInputRef.current.files[0].name);
 
     // Clear current simulation
     const clear = await fetch("/api/stop-simulator", { method: "POST" });
     
-    // Upload using FormData (no Content-Type header - let browser set it)
+    // Upload using FormData
     const res = await fetch("/api/upload-csv", {
       method: "POST",
-      body: formData, // Remove Content-Type header for FormData
+      body: formData,
     });
     
     const result = await res.json();

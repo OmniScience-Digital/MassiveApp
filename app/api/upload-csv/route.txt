@@ -1,9 +1,14 @@
+// app/api/upload-csv/route.ts
 import * as constants from "@/app/constants";
-import { NextResponse } from "next/server";
+import { IncomingForm, File } from "formidable";
+import fs from "fs";
+import { NextRequest, NextResponse } from "next/server";
 
-const MAX_ROWS_PER_CHUNK = 2500;
-const MAX_PAYLOAD_SIZE = 9.5 * 1024 * 1024;
 
+const MAX_ROWS_PER_CHUNK = 2500; // Conservative limit
+const MAX_PAYLOAD_SIZE = 9.5 * 1024 * 1024; // 9.5MB (Amplify limit is ~10MB)
+
+// Helper function to calculate payload size
 function calculatePayloadSize(payload: any): number {
   return new TextEncoder().encode(JSON.stringify(payload)).length;
 }
@@ -13,59 +18,54 @@ function formatBytes(bytes: number): string {
   return `${mb.toFixed(2)} MB`;
 }
 
-export async function POST(req: Request) {
-  try {
-    console.log("Upload CSV endpoint hit");
+
+// export async function POST(request: NextRequest) {
+//   try {
+//     // Convert NextRequest to a format formidable can use
+//     const formData = await request.formData();
     
-    const formData = await req.formData();
-    
-    // Get form fields directly without iteration
-    const file = formData.get('csvFile') as File;
-    const headersField = formData.get('headers') as string;
-    const filenameField = formData.get('filename') as string;
+//     // Extract data from FormData
+//     const filename = formData.get('filename') as string;
+//     const headers = JSON.parse(formData.get('headers') as string || '[]');
+//     const rows = JSON.parse(formData.get('rows') as string || '[]');
+//     const rawData = formData.get('rawData') as string;
+//     const totalRows = parseInt(formData.get('totalRows') as string || '0');
+//     const totalColumns = parseInt(formData.get('totalColumns') as string || '0');
 
-    console.log("File received:", file ? `Yes (${file.name}, ${file.size} bytes)` : "No");
-    console.log("Headers field:", headersField ? "Yes" : "No");
-    console.log("Filename field:", filenameField || "Not provided");
+//     console.log(`Received CSV: ${filename}, ${rows.length} rows, ${headers.length} columns`);
 
-    if (!file || file.size === 0) {
-      console.error("No CSV file found in request");
-      return NextResponse.json(
-        { error: "CSV file is required" },
-        { status: 400 }
-      );
-    }
+//     if (!filename || !headers || !rows) {
+//       return NextResponse.json(
+//         { error: "Missing required fields" },
+//         { status: 400 },
+//       );
+//     }
 
-    // Process CSV file
-    const fileBuffer = await file.arrayBuffer();
-    const csvData = new TextDecoder().decode(fileBuffer);
-    const rows: string[][] = csvData.split("\n").map(r => r.split(","));
+//     // Process with chunking
+//     const result = await processWithChunking({ 
+//       filename, 
+//       headers, 
+//       rows, 
+//       rawData, 
+//       totalRows, 
+//       totalColumns 
+//     });
+//     return NextResponse.json(result);
 
-    // Parse headers
-    const headers = headersField ? JSON.parse(headersField) : [];
+//   } catch (error) {
+//     console.error("Error processing CSV:", error);
+//     return NextResponse.json(
+//       {
+//         error: "Failed to process CSV data",
+//         details: error instanceof Error ? error.message : "Unknown error",
+//       },
+//       { status: 500 },
+//     );
+//   }
+// }
 
-    // Get filename
-    const filename = filenameField || file.name || 'unknown.csv';
 
-    console.log(`Received CSV: ${filename}, ${rows.length} rows, ${headers.length} columns`);
 
-    // Process chunks
-    const result = await processWithChunking({ 
-      filename, 
-      headers, 
-      rows,
-      totalRows: rows.length 
-    });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error("Upload error:", error);
-    return NextResponse.json(
-      { error: (error as Error).message || "Unknown error" },
-      { status: 500 }
-    );
-  }
-}
 
 async function processWithChunking(body: any) {
   const totalRows = body.rows.length;
@@ -81,6 +81,7 @@ async function processWithChunking(body: any) {
   console.log(`Processing ${totalRows} rows in ${totalChunks} chunks`);
   console.log(`Columns: ${body.headers.length}`);
 
+  // If it's a small file, process in one go
   if (totalChunks === 1) {
     const result = await processSingleChunk(body);
     return {
@@ -95,6 +96,7 @@ async function processWithChunking(body: any) {
     };
   }
 
+  // Process large file in chunks
   const results = [];
   const errors = [];
 
@@ -117,6 +119,7 @@ async function processWithChunking(body: any) {
         success: true,
       });
 
+      // Small delay between chunks
       if (chunkIndex < totalChunks - 1) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -164,6 +167,7 @@ async function processSingleChunk(chunkData: any, chunkIndex = 0) {
     } : undefined
   };
 
+  // Calculate and log payload size
   const payloadSize = calculatePayloadSize(payload);
   console.log(`Chunk ${chunkIndex} payload size: ${formatBytes(payloadSize)}`);
 

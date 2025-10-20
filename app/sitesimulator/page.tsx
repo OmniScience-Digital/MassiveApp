@@ -92,110 +92,60 @@ const SiteSimulator = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // const sendToBackend = async () => {
-  //   if (!csvData) return;
-  //   setIsSending(true);
-  //   setUploadProgress({
-  //     currentChunk: 0,
-  //     totalChunks: 0,
-  //     percentage: 0,
-  //     status: "Starting upload..."
-  //   });
-    
-  //   try {
-  //     const payload = {
-  //       filename: fileInputRef.current?.files?.[0]?.name || "uploaded.csv",
-  //       headers: csvData.headers,
-  //       rows: csvData.rows,
-  //       rawData: csvData.rawData,
-  //       totalRows: csvData.rows.length,
-  //       totalColumns: csvData.headers.length,
-  //     };
-  //     //await clear current 
-  //     const clear = await fetch("/api/stop-simulator", { method: "POST" });
-      
-  //     //then upload new to avoid apppending many row
-  //     const res = await fetch("/api/upload-csv", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify(payload),
-  //     });
-      
-  //     const result = await res.json();
-      
-  //     if (result.success) {
-  //       if (result.data?.totalChunks > 1) {
-  //         setMessage(`Success! Processed ${result.data.rowsProcessed} rows in ${result.data.totalChunks} chunks`);
-  //       } else {
-  //         setMessage("CSV processed successfully!");
-  //       }
-  //     } else {
-  //       setMessage(result.error || "Failed to process CSV");
-  //     }
-      
-  //     setShow(true);
-  //     setSuccessful(res.ok);
-      
-  //   } catch (error) {
-  //     setMessage("Error sending CSV: " + error);
-  //     setShow(true);
-  //     setSuccessful(false);
-  //   } finally {
-  //     setIsSending(false);
-  //     setUploadProgress(null);
-  //   }
-  // };
-
-const sendToBackend = async () => {
-  if (!csvData || !fileInputRef.current?.files?.[0]) return;
-  setIsSending(true);
-  setUploadProgress({
-    currentChunk: 0,
-    totalChunks: 0,
-    percentage: 0,
-    status: "Starting upload..."
-  });
-  
-  try {
-    // Create FormData with the actual CSV file
-    const formData = new FormData();
-    formData.append('csvFile', fileInputRef.current.files[0]); // Append the actual file
-    formData.append('headers', JSON.stringify(csvData.headers));
-    formData.append('filename', fileInputRef.current.files[0].name);
-
-    // Clear current simulation
-    const clear = await fetch("/api/stop-simulator", { method: "POST" });
-    
-    // Upload using FormData
-    const res = await fetch("/api/upload-csv", {
-      method: "POST",
-      body: formData,
+  const sendToBackend = async () => {
+    if (!csvData) return;
+    setIsSending(true);
+    setUploadProgress({
+      currentChunk: 0,
+      totalChunks: 0,
+      percentage: 0,
+      status: "Starting upload..."
     });
     
-    const result = await res.json();
-    
-    if (result.success) {
-      if (result.data?.totalChunks > 1) {
-        setMessage(`Success! Processed ${result.data.rowsProcessed} rows in ${result.data.totalChunks} chunks`);
+    try {
+      const payload = {
+        filename: fileInputRef.current?.files?.[0]?.name || "uploaded.csv",
+        headers: csvData.headers,
+        rows: csvData.rows,
+        rawData: csvData.rawData,
+        totalRows: csvData.rows.length,
+        totalColumns: csvData.headers.length,
+      };
+      //await clear current 
+      const clear = await fetch("/api/stop-simulator", { method: "POST" });
+      
+      //then upload new to avoid apppending many row
+      const res = await fetch("/api/upload-csv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      
+      const result = await res.json();
+      
+      if (result.success) {
+        if (result.data?.totalChunks > 1) {
+          setMessage(`Success! Processed ${result.data.rowsProcessed} rows in ${result.data.totalChunks} chunks`);
+        } else {
+          setMessage("CSV processed successfully!");
+        }
       } else {
-        setMessage("CSV processed successfully!");
+        setMessage(result.error || "Failed to process CSV");
       }
-    } else {
-      setMessage(result.error || "Failed to process CSV");
+      
+      setShow(true);
+      setSuccessful(res.ok);
+      
+    } catch (error) {
+      setMessage("Error sending CSV: " + error);
+      setShow(true);
+      setSuccessful(false);
+    } finally {
+      setIsSending(false);
+      setUploadProgress(null);
     }
-    
-    setShow(true);
-    setSuccessful(res.ok);
-    
-  } catch (error) {
-    setMessage("Error sending CSV: " + error);
-    setShow(true);
-    setSuccessful(false);
-  } finally {
-    setIsSending(false);
-    setUploadProgress(null);
-  }
-};
+  };
+
 
   const fetchStatus = async () => {
     try {

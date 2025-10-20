@@ -105,6 +105,7 @@ const sendToBackend = async () => {
     row[1] === "1" || row[1] === "1.00"
   );
   
+  // Initialize progress - THIS IS IMPORTANT
   setUploadProgress({
     currentChunk: 0,
     totalChunks: totalChunks,
@@ -124,11 +125,12 @@ const sendToBackend = async () => {
       const endRow = Math.min(startRow + CHUNK_SIZE, totalRows);
       const chunkRows = csvData.rows.slice(startRow, endRow);
 
+      // UPDATE PROGRESS FOR EACH CHUNK - THIS IS WHAT YOU'RE MISSING
       setUploadProgress({
         currentChunk: chunkIndex + 1,
         totalChunks: totalChunks,
         percentage: Math.round(((chunkIndex + 1) / totalChunks) * 100),
-        status: `Uploading chunk ${chunkIndex + 1} of ${totalChunks}...`
+        status: `Uploading chunk ${chunkIndex + 1} of ${totalChunks}... (${chunkRows.length} rows)`
       });
 
       try {
@@ -171,6 +173,12 @@ const sendToBackend = async () => {
           chunk: chunkIndex + 1,
           error: error instanceof Error ? error.message : 'Unknown error'
         });
+        
+        // Update progress even on error
+        setUploadProgress(prev => prev ? {
+          ...prev,
+          status: `Chunk ${chunkIndex + 1} failed, continuing...`
+        } : null);
       }
     }
 
@@ -195,7 +203,6 @@ const sendToBackend = async () => {
     setUploadProgress(null);
   }
 };
-
   const fetchStatus = async () => {
     try {
       setConnectionError(false);

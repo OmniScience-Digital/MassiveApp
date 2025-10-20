@@ -92,60 +92,109 @@ const SiteSimulator = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const sendToBackend = async () => {
-    if (!csvData) return;
-    setIsSending(true);
-    setUploadProgress({
-      currentChunk: 0,
-      totalChunks: 0,
-      percentage: 0,
-      status: "Starting upload..."
-    });
-    
-    try {
-      const payload = {
-        filename: fileInputRef.current?.files?.[0]?.name || "uploaded.csv",
-        headers: csvData.headers,
-        rows: csvData.rows,
-        rawData: csvData.rawData,
-        totalRows: csvData.rows.length,
-        totalColumns: csvData.headers.length,
-      };
-      //await clear current 
-      const clear = await fetch("/api/stop-simulator", { method: "POST" });
-      
-      //then upload new to avoid apppending many row
-      const res = await fetch("/api/upload-csv", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      
-      const result = await res.json();
-      
-      if (result.success) {
-        if (result.data?.totalChunks > 1) {
-          setMessage(`Success! Processed ${result.data.rowsProcessed} rows in ${result.data.totalChunks} chunks`);
-        } else {
-          setMessage("CSV processed successfully!");
-        }
-      } else {
-        setMessage(result.error || "Failed to process CSV");
-      }
-      
-      setShow(true);
-      setSuccessful(res.ok);
-      
-    } catch (error) {
-      setMessage("Error sending CSV: " + error);
-      setShow(true);
-      setSuccessful(false);
-    } finally {
-      setIsSending(false);
-      setUploadProgress(null);
-    }
-  };
+const sendToBackend = async () => {
+  if (!csvData) return;
+  setIsSending(true);
+  
+  const CHUNK_SIZE = 4000;
+  const totalRows = csvData.rows.length;
+  const totalChunks = Math.ceil(totalRows / CHUNK_SIZE);
+  
+  // Calculate the GLOBAL startRowIndex once
+  const globalStartRowIndex = csvData.rows.findIndex((row: string[]) => 
+    row[1] === "1" || row[1] === "1.00"
+  );
+  
+  setUploadProgress({
+    currentChunk: 0,
+    totalChunks: totalChunks,
+    percentage: 0,
+    status: "Starting upload..."
+  });
 
+  try {
+    // Clear current data
+    await fetch("/api/stop-simulator", { method: "POST" });
+    
+    const results = [];
+    const errors = [];
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const startRow = chunkIndex * CHUNK_SIZE;
+      const endRow = Math.min(startRow + CHUNK_SIZE, totalRows);
+      const chunkRows = csvData.rows.slice(startRow, endRow);
+
+      setUploadProgress({
+        currentChunk: chunkIndex + 1,
+        totalChunks: totalChunks,
+        percentage: Math.round(((chunkIndex + 1) / totalChunks) * 100),
+        status: `Uploading chunk ${chunkIndex + 1} of ${totalChunks}...`
+      });
+
+      try {
+        const payload = {
+          filename: fileInputRef.current?.files?.[0]?.name || "uploaded.csv",
+          headers: csvData.headers,
+          rows: chunkRows,
+          totalRows: totalRows,
+          totalColumns: csvData.headers.length,
+          globalStartRowIndex: globalStartRowIndex,
+          chunkInfo: {
+            chunkIndex,
+            totalChunks,
+          }
+        };
+
+        const res = await fetch("/api/upload-csv", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+
+        if (res.ok && result.success) {
+          results.push(result);
+          console.log(`✅ Chunk ${chunkIndex + 1} processed successfully`);
+        } else {
+          throw new Error(result.error || `Chunk ${chunkIndex + 1} failed`);
+        }
+
+        // Small delay between chunks
+        if (chunkIndex < totalChunks - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+      } catch (error) {
+        console.error(`❌ Failed to process chunk ${chunkIndex + 1}:`, error);
+        errors.push({
+          chunk: chunkIndex + 1,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    const totalProcessed = results.reduce((sum, r) => sum + (r.rowsProcessed || 0), 0);
+    
+    if (errors.length === 0) {
+      setMessage(`✅ Success! Processed ${totalProcessed} rows in ${totalChunks} chunks`);
+      setSuccessful(true);
+    } else {
+      setMessage(`⚠ Processed ${totalProcessed} of ${totalRows} rows with ${errors.length} errors`);
+      setSuccessful(false);
+    }
+    
+    setShow(true);
+
+  } catch (error) {
+    setMessage("Error sending CSV: " + error);
+    setShow(true);
+    setSuccessful(false);
+  } finally {
+    setIsSending(false);
+    setUploadProgress(null);
+  }
+};
 
   const fetchStatus = async () => {
     try {

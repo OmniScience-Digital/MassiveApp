@@ -2,15 +2,7 @@
 import * as constants from "@/app/constants";
 import { NextRequest, NextResponse } from "next/server";
 
- const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '15mb',
-    },
-    responseLimit: '8mb',
-    externalResolver: true,
-  },
-}
+
 
 const MAX_ROWS_PER_CHUNK = 4000; // Conservative limit
 

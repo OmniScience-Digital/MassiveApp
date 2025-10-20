@@ -201,14 +201,12 @@ async function processSingleChunk(chunkData: any, chunkIndex = 0) {
     }
 
     // Try to parse JSON
-    try {
-      const jsonResponse = JSON.parse(responseText);
-      return jsonResponse;
-    } catch (parseError) {
-      console.error(`JSON parse error for chunk ${chunkIndex}:`, parseError);
-      console.error('Raw response:', responseText);
-      throw new Error(`Backend returned invalid JSON: ${parseError}`);
-    }
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`External API returned ${response.status}: ${errorText}`);
+  }
+
+  return await response.json();
 
   } catch (error) {
     console.error(`Network error for chunk ${chunkIndex}:`, error);

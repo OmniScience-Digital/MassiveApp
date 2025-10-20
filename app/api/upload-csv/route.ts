@@ -117,11 +117,46 @@ async function processWithChunking(body: any) {
   };
 }
 
+// async function processSingleChunk(chunkData: any, chunkIndex = 0) {
+//   const payload = {
+//     startRowIndex:chunkData.startRowIndex,
+//     totalRows: chunkData.totalRows,
+//     totalColumns: chunkData.totalColumns,
+//     headers: chunkData.headers,
+//     rows: chunkData.rows,
+//     chunkInfo: chunkData.rows.length < chunkData.totalRows ? {
+//       chunkIndex,
+//       isChunked: true,
+//       chunkRows: chunkData.rows.length,
+//       totalChunks: Math.ceil(chunkData.totalRows / MAX_ROWS_PER_CHUNK)
+//     } : undefined
+//   };
+
+//   const response = await fetch(
+//     `${constants.securebaseUrltest}/sitesimulator`,
+//     {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify(payload),
+//     },
+//   );
+
+//   if (!response.ok) {
+//     const errorText = await response.text();
+//     throw new Error(`External API returned ${response.status}: ${errorText}`);
+//   }
+
+//   return await response.json();
+// }
+
+
 async function processSingleChunk(chunkData: any, chunkIndex = 0) {
   const payload = {
-    startRowIndex:chunkData.startRowIndex,
-    totalRows: chunkData.totalRows,
-    totalColumns: chunkData.totalColumns,
+    startRowIndex: chunkData.startRowIndex,
+    totalRows: chunkData.rows.length, // Fixed: should be chunkData.rows.length, not totalRows
+    totalColumns: chunkData.headers.length, // Fixed: should be headers length
     headers: chunkData.headers,
     rows: chunkData.rows,
     chunkInfo: chunkData.rows.length < chunkData.totalRows ? {
@@ -132,21 +167,51 @@ async function processSingleChunk(chunkData: any, chunkIndex = 0) {
     } : undefined
   };
 
-  const response = await fetch(
-    `${constants.securebaseUrltest}/sitesimulator`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+  console.log(`Sending chunk ${chunkIndex} to backend:`, {
+    url: `${constants.securebaseUrltest}/sitesimulator`,
+    rows: payload.rows.length,
+    headers: payload.headers.length
+  });
+
+  try {
+    const response = await fetch(
+      `${constants.securebaseUrltest}/sitesimulator`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    },
-  );
+    );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`External API returned ${response.status}: ${errorText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Backend returned error: ${response.status}`, errorText);
+      throw new Error(`External API returned ${response.status}: ${errorText}`);
+    }
+
+    // Get the response as text first
+    const responseText = await response.text();
+    console.log(`Backend response for chunk ${chunkIndex}:`, responseText);
+
+    // Check if response is empty
+    if (!responseText) {
+      throw new Error('Backend returned empty response');
+    }
+
+    // Try to parse JSON
+    try {
+      const jsonResponse = JSON.parse(responseText);
+      return jsonResponse;
+    } catch (parseError) {
+      console.error(`JSON parse error for chunk ${chunkIndex}:`, parseError);
+      console.error('Raw response:', responseText);
+      throw new Error(`Backend returned invalid JSON: ${parseError}`);
+    }
+
+  } catch (error) {
+    console.error(`Network error for chunk ${chunkIndex}:`, error);
+    throw error;
   }
-
-  return await response.json();
 }

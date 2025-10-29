@@ -395,7 +395,7 @@ const CSVParser = () => {
                 </div>
               )}
 
-              {status ? (
+              {/* {status ? (
                 <div className="mt-4 p-4 border rounded bg-gray-50">
                   <h3 className="font-bold mb-2">Batches Summary</h3>
                   <div className="grid grid-cols-2 gap-2">
@@ -426,7 +426,7 @@ const CSVParser = () => {
                     No progress data available. Click "Check Status" to fetch current progress.
                   </div>
                 )
-              )}
+              )} */}
 
 
             </CardContent>

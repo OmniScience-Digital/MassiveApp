@@ -281,15 +281,15 @@ export const FormulaEditor = ({
                     prev ? { ...prev, formulaname: e.target.value } : null,
                   )
                 }
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded text-black"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Formula</label>
+              <label className="block text-sm font-medium mb-1">Formulaw</label>
               <div className="p-3 border rounded bg-gray-50 min-h-12 font-mono mb-2">
                 {editingFormula?.formula || (
-                  <span className="text-gray-400">
+                  <span className="text-black">
                     Formula will appear here
                   </span>
                 )}
@@ -302,7 +302,7 @@ export const FormulaEditor = ({
                   onChange={(e) => setCustomScale(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Type any scale name"
-                  className="flex-1 p-2 border rounded"
+                  className="flex-1 p-2 border rounded text-black"
                 />
                 <Button
                   variant="outline"

@@ -23,13 +23,14 @@ export interface DynamicTableProps {
   >;
   setDbTableCount: React.Dispatch<React.SetStateAction<number>>;
   onSave?: (savedTables: ReportItem["dynamic_tables"]) => void;
+  onDelete?: (tableId: number) => void;
 }
 
 export default function DynamicTable({
   table,
   tableCount,
   setDbTableCount,
-  setDynamictables, onSave, title
+  setDynamictables, onSave, title, onDelete
 }: DynamicTableProps) {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
@@ -219,28 +220,50 @@ export default function DynamicTable({
     setTables(updatedTables);
   };
 
+  // Update the handleDeleteComponent function
   const handleDeleteComponent = async () => {
     try {
-      let sites: any;
-
       setloadingDelete(true);
+
+      // For unsaved tables (no ID or ID = 0)
+      if (!tables[0].id || tables[0].id === 0) {
+        // Use the onDelete callback if provided
+        if (onDelete) {
+          onDelete(tables[0].id || 0);
+        } else {
+          // Fallback: Filter out this table
+          setDynamictables(prev => prev.filter(table =>
+            table.tableName !== tables[0].tableName
+          ));
+        }
+        setSuccessful(true);
+        setMessage("Table deleted successfully");
+        setloadingDelete(false);
+        setShow(true);
+        return;
+      }
+
+      let sites: any;
 
       if (title === "rpt") {
         sites = await deleterptDynamicTable(
           id as string,
           tables[0].id as number,
         );
-
       } else {
         sites = await deleteDynamicTable(
           id as string,
           tables[0].id as number,
         );
-
       }
 
+      // Use the onDelete callback if provided
+      if (onDelete) {
+        onDelete(tables[0].id);
+      } else if (sites) {
+        setDynamictables(sites);
+      }
 
-      setDynamictables(sites);
       setSuccessful(true);
       setMessage("Table deleted successfully");
       setloadingDelete(false);
@@ -253,7 +276,6 @@ export default function DynamicTable({
       setShow(true);
     }
   };
-
   const isDisabled = !(isEdited || headerEdited);
 
   return (

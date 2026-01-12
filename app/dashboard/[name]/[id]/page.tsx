@@ -91,119 +91,11 @@ export default function DashboardPage() {
         }
     };
 
-    // const getSiteByid = async () => {
-    //     setLoading(true);
-    //     // get a specific item
-    //     try {
-    //         const { data: site, errors } = await client.models.Sites.get({
-    //             id: id,
-    //         });
-
-    //         if (errors) {
-    //             console.error("Error fetching site:", errors);
-    //             setLoading(false);
-    //             return null; // Handle error properly
-    //         }
-
-    //         if (!site) {
-    //             // Return null if site is null
-    //             console.error("Site not found");
-    //             setLoading(false);
-    //             return null;
-    //         }
-
-    //         // Check if 'site' contains the correct structure and parse if necessary
-    //         if (typeof site.site === "string") {
-    //             const parsedSite = JSON.parse(site.site);
-
-    //             // Ensure the parsed site matches the ReportItem structure
-    //             const formattedSite: ReportItem = {
-    //                 id: site.id,
-    //                 audit: parsedSite.audit,
-    //                 progressive: parsedSite.progressive,
-    //                 hourly: parsedSite.hourly,
-    //                 rpt: parsedSite.rpt,
-    //                 siteStatus: parsedSite.siteStatus,
-    //                 siteConstants: parsedSite.siteConstants,
-    //                 siteTimes: parsedSite.siteTimes,
-    //                 dynamic_inputs: parsedSite.dynamic_inputs || [],
-    //                 dynamic_tables: parsedSite.dynamic_tables || [],
-    //                 rpt_inputs: parsedSite.rpt_inputs || [],
-    //                 rpt_tables: parsedSite.rpt_tables || [],
-    //                 scales: parsedSite.scales || [],
-    //                 headers: parsedSite.headers || [],
-    //                 formulas: parsedSite.formulas || [],
-    //                 primaryScales: parsedSite.primaryScales || [],
-    //             };
-
-    //             setLoading(false);
-    //             return formattedSite; // Return the formatted site as ReportItem
-    //         }
-
-    //         return null; // Return null if site doesn't match expected structure
-    //     } catch (error) {
-    //         console.error("Unexpected error:", error);
-    //         return null; // Ensure function returns a value in case of an error
-    //     }
-    // };
-
-    // const updateSiteStatusById = async (id: string, newSiteStatus: string) => {
-    //     try {
-    //         // First, retrieve the current site details
-    //         const { data: site, errors } = await client.models.Sites.get({ id });
-
-    //         if (errors) {
-    //             console.error("Error fetching site:", errors);
-    //             setLoading(false);
-    //             return null; // Handle error properly
-    //         }
-
-    //         if (!site) {
-    //             console.error("Site not found");
-    //             setLoading(false);
-    //             return null;
-    //         }
-
-    //         // Check if 'site' contains the correct structure and parse if necessary
-    //         let parsedSite;
-    //         if (typeof site.site === "string") {
-    //             parsedSite = JSON.parse(site.site);
-    //         } else {
-    //             parsedSite = site.site;
-    //         }
-
-    //         // Ensure the parsed site matches the ReportItem structure
-    //         const updatedSite = {
-    //             ...parsedSite, // Keep all existing fields
-    //             siteStatus: newSiteStatus, // Update the siteStatus with the new value
-    //         };
-
-    //         // Now you need to update the site in the database with the new site status
-    //         const updateResponse = await client.models.Sites.update({
-    //             id, // ID of the site to update
-    //             site: JSON.stringify(updatedSite), // Directly pass the updated site
-    //         });
-
-    //         // Check if the update was successful
-    //         if (updateResponse.errors) {
-    //             console.error("Error updating site:", updateResponse.errors);
-
-    //             return null; // Handle error properly
-    //         }
-
-    //         return updatedSite; // Return the updated site
-    //     } catch (error) {
-    //         console.error("Unexpected error:", error);
-
-    //         return null; // Ensure function returns a value in case of an error
-    //     }
-    // };
-
     const getSiteByid = async () => {
         setLoading(true);
         // get a specific item
         try {
-            const { data: sites, errors } = await client.models.Sites.get({
+            const { data: site, errors } = await client.models.Sites.get({
                 id: id,
             });
 
@@ -213,15 +105,12 @@ export default function DashboardPage() {
                 return null; // Handle error properly
             }
 
-            if (!sites || !Array.isArray(sites) || sites.length === 0) {
-                // Return null if site is null or not an array
-                console.error("Site not found or invalid response");
+            if (!site) {
+                // Return null if site is null
+                console.error("Site not found");
                 setLoading(false);
                 return null;
             }
-
-            // Get the first site from the array
-            const site = sites[0];
 
             // Check if 'site' contains the correct structure and parse if necessary
             if (typeof site.site === "string") {
@@ -251,45 +140,17 @@ export default function DashboardPage() {
                 return formattedSite; // Return the formatted site as ReportItem
             }
 
-            // Handle case where site.site is already an object
-            if (typeof site.site === "object" && site.site !== null) {
-                const parsedSite = site.site;
-                const formattedSite: ReportItem = {
-                    id: site.id,
-                    audit: parsedSite.audit,
-                    progressive: parsedSite.progressive,
-                    hourly: parsedSite.hourly,
-                    rpt: parsedSite.rpt,
-                    siteStatus: parsedSite.siteStatus,
-                    siteConstants: parsedSite.siteConstants,
-                    siteTimes: parsedSite.siteTimes,
-                    dynamic_inputs: parsedSite.dynamic_inputs || [],
-                    dynamic_tables: parsedSite.dynamic_tables || [],
-                    rpt_inputs: parsedSite.rpt_inputs || [],
-                    rpt_tables: parsedSite.rpt_tables || [],
-                    scales: parsedSite.scales || [],
-                    headers: parsedSite.headers || [],
-                    formulas: parsedSite.formulas || [],
-                    primaryScales: parsedSite.primaryScales || [],
-                };
-
-                setLoading(false);
-                return formattedSite;
-            }
-
-            console.error("Invalid site structure:", site);
-            setLoading(false);
             return null; // Return null if site doesn't match expected structure
         } catch (error) {
             console.error("Unexpected error:", error);
-            setLoading(false);
             return null; // Ensure function returns a value in case of an error
         }
     };
+
     const updateSiteStatusById = async (id: string, newSiteStatus: string) => {
         try {
             // First, retrieve the current site details
-            const { data: sites, errors } = await client.models.Sites.get({ id });
+            const { data: site, errors } = await client.models.Sites.get({ id });
 
             if (errors) {
                 console.error("Error fetching site:", errors);
@@ -297,24 +158,18 @@ export default function DashboardPage() {
                 return null; // Handle error properly
             }
 
-            if (!sites || !Array.isArray(sites) || sites.length === 0) {
+            if (!site) {
                 console.error("Site not found");
                 setLoading(false);
                 return null;
             }
 
-            // Get the first site from the array
-            const site = sites[0];
-
             // Check if 'site' contains the correct structure and parse if necessary
             let parsedSite;
             if (typeof site.site === "string") {
                 parsedSite = JSON.parse(site.site);
-            } else if (typeof site.site === "object" && site.site !== null) {
-                parsedSite = site.site;
             } else {
-                console.error("Invalid site structure");
-                return null;
+                parsedSite = site.site;
             }
 
             // Ensure the parsed site matches the ReportItem structure
@@ -332,15 +187,18 @@ export default function DashboardPage() {
             // Check if the update was successful
             if (updateResponse.errors) {
                 console.error("Error updating site:", updateResponse.errors);
+
                 return null; // Handle error properly
             }
 
             return updatedSite; // Return the updated site
         } catch (error) {
             console.error("Unexpected error:", error);
+
             return null; // Ensure function returns a value in case of an error
         }
     };
+
     const handleDelete = async (formulaname: string) => {
         try {
             await deleteFormula(id as string, formulaname as string);
@@ -554,7 +412,7 @@ export default function DashboardPage() {
     // Handle updates from child InputList
 
     const handleUpdateInputList = (updatedData: DynamicInputItem) => {
-        console.log("handleUpdateInputList CALLED with:", updatedData);
+
         if (!updatedData.id) return;
 
         setDynamicInputs(prev => {
@@ -569,12 +427,42 @@ export default function DashboardPage() {
                 }
                 return item;
             });
-            console.log("Updated dynamicInputs:", updated);
+
             return updated;
         });
     };
 
+    const handleDeleteTable = (tableId: number) => {
 
+        if (tableId === dbtableCount + 1 || tableId <= dbtableCount) {
+            // This is  an unsaved table
+            // Remove from dynamictables state
+            setDynamictables(prev => {
+
+                const filtered = prev.filter(table => {
+
+                    // If table has the same temporary ID or is the last unsaved one
+                    if (table.id === tableId) {
+                        return false; // Remove this table
+                    }
+                    return true;
+                });
+
+                return filtered;
+            });
+
+            // Decrement tableCount for unsaved tables
+            setTableCount(prev => Math.max(0, prev - 1));
+            return;
+        }
+
+        // For saved tables from database
+        setDynamictables(prev => {
+            const filtered = prev.filter(table => table.id !== tableId);
+            console.log("Deleting saved table. Remaining:", filtered);
+            return filtered;
+        });
+    };
     const handleTableSaved = (savedTables: ReportItem["dynamic_tables"]) => {
         // Update the dynamictables state with saved data from database
         setDynamictables(savedTables);
@@ -957,7 +845,8 @@ export default function DashboardPage() {
                                                 setDynamictables={setDynamictables}
                                                 setDbTableCount={setDbTableCount}
                                                 tableCount={dbtableCount}
-                                                onSave={handleTableSaved}  // Add this prop
+                                                onSave={handleTableSaved}
+                                                onDelete={handleDeleteTable}
                                                 title="custom"
                                             />
                                         ))}
@@ -970,7 +859,8 @@ export default function DashboardPage() {
                                                 setDynamictables={setDynamictables}
                                                 setDbTableCount={setDbTableCount}
                                                 tableCount={dbtableCount}
-                                                onSave={handleTableSaved}  // Add this prop
+                                                onSave={handleTableSaved}
+                                                onDelete={handleDeleteTable}
                                                 title="custom"
                                             />
                                         ))}

@@ -198,11 +198,12 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
         setDynamicInputs(prev => [...prev, basicConfigInput]);
         setDynamicTables(prev => [...prev, rptScaleTable]);
         setInputListCount(prev => prev + 1);
-        
+
         setSuccessful(true);
         setMessage("RPT Configuration setup successfully! RPT Scale Table created.");
         setShow(true);
     };
+
 
     // Handle updates from InputList
     const handleUpdateInputList = (updatedData: DynamicInputItem) => {
@@ -219,6 +220,28 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
     const handleTableSaved = (savedTables: ReportItem["dynamic_tables"]) => {
         setDynamicTables(savedTables);
     };
+
+    const handleDeleteTable = (tableId: number) => {
+
+        // Remove the table from state
+        setDynamicTables(prev => {
+            const updated = prev.filter(table => {
+                // For tables with string IDs (like "rpt-basic-123")
+                if (typeof table.id === 'string' && table.id === tableId.toString()) {
+                    return false;
+                }
+                // For tables with numeric IDs
+                if (table.id === tableId) {
+                    return false;
+                }
+                return true;
+            });
+
+
+            return updated;
+        });
+    };
+
 
     // Check if we have RPT configuration
     const hasRptConfig = dynamicInputs.some(item =>
@@ -320,6 +343,7 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
                                                     tableCount={dbTableCount}
                                                     onSave={handleTableSaved}
                                                     title={"rpt"}
+                                                    onDelete={handleDeleteTable}
                                                 />
                                             ))}
 
@@ -376,6 +400,7 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
                                                     tableCount={dbTableCount}
                                                     onSave={handleTableSaved}
                                                     title={"rpt"}
+                                                    onDelete={handleDeleteTable}
                                                 />
                                             ))}
 

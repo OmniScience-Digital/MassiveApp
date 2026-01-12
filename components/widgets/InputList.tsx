@@ -131,6 +131,7 @@ const deleteInput = (index: number) => {
   const newInputs = inputs.filter((_, i) => i !== index);
   setInputs(newInputs);
 
+
   // Notify parent immediately
   if (onUpdate) {
     onUpdate({
@@ -228,14 +229,15 @@ const deleteInput = (index: number) => {
       );
 
       //deleting an unsave component
-      if (deleteComponent === -1) {
-        if (inputListCount > 0) {
-          const newListCount = inputListCount - 1;
-          setInputListCount(newListCount - 1);
-        } else {
-          setInputListCount(0);
-        }
-      } else {
+
+if (deleteComponent === -1) {
+  // Remove this component from the dynamicInputs array
+  setDynamicInputs(prev => prev.filter(item => item.id !== id));
+  
+  if (inputListCount > 0) {
+    setInputListCount(prev => prev - 1);
+  }
+} else {
         //updating database
         if (inputListCount > 0) {
           const newListCount = inputListCount - 1;

@@ -43,11 +43,11 @@ export const SignInCard = ({ setState }: SignInCardProps) => {
       .then((user) => {
 
         router.push("/landing");
-      });
-      // .catch((error) => {
-      //   console.log("User is NOT authenticated:", error);
+      })
+      .catch((error) => {
+        console.log("User is NOT authenticated:", error);
         
-      // });
+      });
   }, [router]);
 
 

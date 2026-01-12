@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { client } from "@/service/schemaClient";
-import { Loader2, PlayIcon, Clock, Settings, Calculator, Table,Ruler,  Scale } from "lucide-react";
+import { Loader2, PlayIcon, Mail, Clock, Settings, Calculator, Table, List } from "lucide-react";
 import Navbar from "@/components/layout/navbar";
 import DynamicTable from "@/components/widgets/tables/dynamictable";
 import InputList from "@/components/widgets/InputList";
@@ -35,10 +35,19 @@ import {
     runtelegramReportwithDate,
 } from "@/app/api/shiftreports.route";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Rpt from "@/components/dashboard/rpt.component";
-import { DynamicInputItem, InputData } from "@/types/dynamic-inputs";
+import { InputData } from "@/types/dynamic-inputs";
 
-
+// Define extended type for dynamic inputs with id
+interface DynamicInputItem {
+  id?: number | string;
+  inputListName: string;
+  inputs: Array<{
+    type: "text" | "number" | "date" | "datetime-local";
+    value: string;
+    label: string;
+    isEditing: boolean;
+  }>;
+}
 
 export default function DashboardPage() {
     const params = useParams();
@@ -54,9 +63,7 @@ export default function DashboardPage() {
     const [primaryScales, setPrimaryScales] = useState<string[]>([]);
     const [formulas, setFormulas] = useState<ReportItem["formulas"]>([]);
     const [dynamicInputs, setDynamicInputs] = useState<DynamicInputItem[]>([]);
-    const [rptdynamicInputs, setrptDynamicInputs] = useState<DynamicInputItem[]>([]);
     const [dynamictables, setDynamictables] = useState<ReportItem["dynamic_tables"]>([]);
-    const [rpt_dynamictables, setrptDynamictables] = useState<ReportItem["dynamic_tables"]>([]);
     const [tableCount, setTableCount] = useState(0);
     const [dbtableCount, setDbTableCount] = useState(0);
     const [inputListCount, setInputListCount] = useState(0);
@@ -83,7 +90,7 @@ export default function DashboardPage() {
             ],
         },
     ];
-
+    
 
     const handleShiftChange = (value: string) => {
         if (value) {
@@ -120,16 +127,11 @@ export default function DashboardPage() {
                 const formattedSite: ReportItem = {
                     id: site.id,
                     audit: parsedSite.audit,
-                    progressive: parsedSite.progressive,
-                    hourly: parsedSite.hourly,
-                    rpt: parsedSite.rpt,
                     siteStatus: parsedSite.siteStatus,
                     siteConstants: parsedSite.siteConstants,
                     siteTimes: parsedSite.siteTimes,
                     dynamic_inputs: parsedSite.dynamic_inputs || [],
                     dynamic_tables: parsedSite.dynamic_tables || [],
-                    rpt_inputs: parsedSite.rpt_inputs || [],
-                    rpt_tables: parsedSite.rpt_tables || [],
                     scales: parsedSite.scales || [],
                     headers: parsedSite.headers || [],
                     formulas: parsedSite.formulas || [],
@@ -231,14 +233,8 @@ export default function DashboardPage() {
                     ...item,
                     id: (item as any).id || Date.now() + index
                 }));
-                  const rptinputsWithIds: DynamicInputItem[] = siteData?.rpt_inputs?.map((item, index) => ({
-                    ...item,
-                    id: (item as any).id || Date.now() + index
-                }))||[];
-                setrptDynamicInputs(rptinputsWithIds);
                 setDynamicInputs(inputsWithIds);
                 setDynamictables(siteData.dynamic_tables);
-                setrptDynamictables(siteData?.rpt_tables ?? []);
                 setDbTableCount(siteData.dynamic_tables.length);
             }
         };
@@ -410,70 +406,45 @@ export default function DashboardPage() {
     };
 
     // Handle updates from child InputList
-
     const handleUpdateInputList = (updatedData: DynamicInputItem) => {
-  console.log("handleUpdateInputList CALLED with:", updatedData);
-  if (!updatedData.id) return;
-
-  setDynamicInputs(prev => {
-    const updated = prev.map(item => {
-      // Compare IDs as strings to avoid type issues
-      if (item.id?.toString() === updatedData.id?.toString()) {
-        return {
-          ...item,
-          inputListName: updatedData.inputListName || item.inputListName,
-          inputs: updatedData.inputs || item.inputs
-        };
-      }
-      return item;
-    });
-    console.log("Updated dynamicInputs:", updated);
-    return updated;
-  });
-};
-
-
-    const handleTableSaved = (savedTables: ReportItem["dynamic_tables"]) => {
-        // Update the dynamictables state with saved data from database
-        setDynamictables(savedTables);
-        // Reset tableCount to remove the temporary "new table" UI
-        setTableCount(0);
-        // Update the db table count
-        setDbTableCount(savedTables.length);
+        if (!updatedData.id) return;
+        
+        setDynamicInputs(prev => 
+            prev.map(item => 
+                item.id === updatedData.id ? { ...item, ...updatedData } : item
+            )
+        );
     };
-
-
+    
 
     return (
         <div className="flex flex-col h-screen bg-background text-foreground">
             <Navbar />
 
+            {/* Dashboard Header */}
+            <div className="px-4 py-2 border-b">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                        <h1 className="text-2xl font-bold">{dashboardname} DASHBOARD</h1>
+                        <p className="text-sm text-muted-foreground">Manage site configuration and reports</p>
+                    </div>
 
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg font-semibold">{siteName}</span>
+                        <Threewaytoggle
+                            onChange={handleToggleChange}
+                            runValue={selectedValue}
+                        />
+                    </div>
+                </div>
+            </div>
 
             {loading ? (
                 <Loading />
             ) : (
-
                 <main className="flex-1 overflow-auto">
                     {sitedata && (
                         <>
-                            {/* Dashboard Header */}
-                            <div className="px-4 py-2 border-b">
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                    <div>
-                                        <h1 className="text-2xl font-bold">{dashboardname} DASHBOARD</h1>
-                                        <p className="text-sm text-muted-foreground">Manage site configuration and reports</p>
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-lg font-semibold">{siteName}</span>
-                                        <Threewaytoggle
-                                            onChange={handleToggleChange}
-                                            runValue={selectedValue}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
                             {/* Quick Actions Section - Always visible */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2 p-2 bg-background text-foreground">
                                 <div className="p-4 shadow-md border shadow-gray-200 rounded-md flex items-center justify-between bg-background text-foreground">
@@ -607,7 +578,7 @@ export default function DashboardPage() {
 
                             {/* Main Configuration Tabs */}
                             <Tabs defaultValue="schedules" className="w-full p-4">
-                                <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+                                <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5">
                                     <TabsTrigger value="schedules" className="flex items-center gap-2">
                                         <Clock className="h-4 w-4" />
                                         <span className="hidden sm:inline">Schedules</span>
@@ -623,18 +594,13 @@ export default function DashboardPage() {
                                         <span className="hidden sm:inline">Formulas</span>
                                     </TabsTrigger>
                                     <TabsTrigger value="scales" className="flex items-center gap-2">
-                                        <Scale className="h-4 w-4" />
+                                        <List className="h-4 w-4" />
                                         <span className="hidden sm:inline">Scales</span>
-                                    </TabsTrigger>
-                                     <TabsTrigger value="rpt" className="flex items-center gap-2">
-                                        <Ruler className="h-4 w-4" />
-                                        <span className="hidden sm:inline">Rand Per Ton</span>
                                     </TabsTrigger>
                                     <TabsTrigger value="custom" className="flex items-center gap-2">
                                         <Table className="h-4 w-4" />
                                         <span className="hidden sm:inline">Custom Data</span>
                                     </TabsTrigger>
-                                   
                                 </TabsList>
 
                                 {/* Schedules Tab */}
@@ -747,18 +713,6 @@ export default function DashboardPage() {
                                         </CardContent>
                                     </Card>
                                 </TabsContent>
-                                {/* RPT */}
-                                <TabsContent value="rpt" className="space-y-4 mt-4">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle className="text-base">RPT Config</CardTitle>
-                                            <CardDescription>Rand Per Ton Configuration</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <Rpt rptInputs={rptdynamicInputs} rpt_dynamictables={rpt_dynamictables} />
-                                        </CardContent>
-                                    </Card>
-                                </TabsContent>
 
                                 {/* Custom Data Tab */}
                                 <TabsContent value="custom">
@@ -797,44 +751,35 @@ export default function DashboardPage() {
                                                 setInputListCount={setInputListCount}
                                                 inputListCount={inputListCount}
                                                 onUpdate={handleUpdateInputList}
-                                                 title="custom" 
-                                                
                                             />
                                         ))}
 
                                     </div>
 
-
                                     {/* Render Tables */}
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2">
-                                        {/* Render existing tables from database */}
-                                        {dynamictables.map((item, index) => (
-                                            <DynamicTable
-                                                key={item.id || index}
-                                                table={[item]}
-                                                setDynamictables={setDynamictables}
-                                                setDbTableCount={setDbTableCount}
-                                                tableCount={dbtableCount}
-                                                onSave={handleTableSaved}  // Add this prop
-                                                 title="custom" 
-                                            />
-                                        ))}
+                                        {dynamictables.length > 0 &&
+                                            dynamictables.map((item, index) => (
+                                                <DynamicTable
+                                                    key={index}
+                                                    table={[item]}
+                                                    setDynamictables={setDynamictables}
+                                                    setDbTableCount={setDbTableCount}
+                                                    tableCount={dbtableCount}
+                                                />
+                                            ))}
 
-                                        {/* Render new tables being created */}
                                         {Array.from({ length: tableCount }).map((_, index) => (
                                             <DynamicTable
-                                                key={`new-table-${Date.now()}-${index}`}
+                                                key={`table-${index}`}
                                                 table={initialTable}
                                                 setDynamictables={setDynamictables}
                                                 setDbTableCount={setDbTableCount}
                                                 tableCount={dbtableCount}
-                                                onSave={handleTableSaved}  // Add this prop
-                                                 title="custom" 
                                             />
                                         ))}
                                     </div>
                                 </TabsContent>
-
                             </Tabs>
                         </>
                     )}

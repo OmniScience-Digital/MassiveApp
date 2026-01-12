@@ -36,6 +36,11 @@ const Automatedreporting = () => {
     Record<string, boolean>
   >({});
 
+  const [checkedItemsRPT, setCheckedItemsRPT] = useState<
+    Record<string, boolean>
+  >({});
+
+
   //stop times state
   const [stopTimes, setStopTimes] = useState<StopTimesState>({
     dayStop: [],
@@ -110,6 +115,15 @@ const Automatedreporting = () => {
         {} as Record<string, boolean>,
       );
       setCheckedItemshourly(initialCheckedStateHourly);
+
+      const initialCheckedStateRPT = submittedsites.reduce(
+        (acc, site) => {
+          acc[site.id] = site.rpt || false;
+          return acc;
+        },
+        {} as Record<string, boolean>,
+      );
+      setCheckedItemsRPT(initialCheckedStateRPT);
     }
   }, [submittedsites]);
 
@@ -445,6 +459,54 @@ const Automatedreporting = () => {
         />
       ),
     },
+    {
+      accessorKey: "rpt",
+      header: "RPT",
+      cell: ({ row }: { row: any }) => (
+        <Checkbox
+          checked={checkedItemsRPT[row.original.id] || false}
+          onCheckedChange={async (checked) => {
+            const isChecked = Boolean(checked);
+            const siteId = row.original.id;
+
+            setCheckedItemsRPT((prev) => ({
+              ...prev,
+              [siteId]: isChecked,
+            }));
+
+            try {
+              const { data: siteModel, errors } =
+                await client.models.Sites.get({ id: siteId });
+
+              if (errors || !siteModel?.site) return;
+
+              const parsedSite =
+                typeof siteModel.site === "string"
+                  ? JSON.parse(siteModel.site)
+                  : siteModel.site;
+
+              const updatedSite = {
+                ...parsedSite,
+                rpt: isChecked,
+              };
+
+              await client.models.Sites.update({
+                id: siteId,
+                site: JSON.stringify(updatedSite),
+              });
+
+              console.log(`RPT status updated for site ID: ${siteId}`);
+            } catch (err) {
+              console.error(
+                `Failed to update RPT status for site ID: ${siteId}`,
+                err,
+              );
+            }
+          }}
+        />
+      ),
+    }
+
   ];
 
   const data = Array.isArray(submittedsites)
@@ -462,6 +524,7 @@ const Automatedreporting = () => {
         audit: checkedItems[site.id] || false, // Use the checkedItems state
         progressive: checkedItemsProgressive[site.id] || false, // Use the checkedItemsProgressive state
         hourly: checkedItemsHourly[site.id] || false, // Use the checkedItemsHourly state
+        rpt: checkedItemsRPT[site.id] || false, // Use the checkedItemsHourly state
       };
     })
     : [];

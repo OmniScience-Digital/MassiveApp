@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash, Edit, Save, Loader2 } from "lucide-react"; // Icons from shadcn/ui
+import { Plus, Trash, Edit, Save, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -16,61 +16,60 @@ import {
 } from "@/components/ui/dialog";
 import {
   createDynamicList,
+  createRptDynamicList,
   deleteDynamicList,
 } from "@/service/dynamiInpuList.Service";
 import ResponseModal from "./response";
-import { ReportItem } from "@/types/schema";
+import { DynamicInputItem, InputData, InputType } from "@/types/dynamic-inputs";
 
-// Define the InputType and InputData types
-type InputType = "text" | "number" | "date" | "datetime-local";
-
-interface InputData {
-  type: InputType;
-  value: string;
-  label: string;
-  isEditing: boolean;
-}
 
 // Define the props for the InputList component
 interface InputListProps {
+  id?: string | number;
   initialHeaderName?: string;
   initialInputs?: InputData[];
   inputListCount: number;
-  setDynamicInputs: React.Dispatch<
-    React.SetStateAction<ReportItem["dynamic_inputs"]>
-  >;
+  title?: string;
+  setDynamicInputs: React.Dispatch<React.SetStateAction<DynamicInputItem[]>>;
   setInputListCount: React.Dispatch<React.SetStateAction<number>>;
+  onUpdate?: (updatedData: DynamicInputItem) => void;
 }
 
 const InputList = ({
+  id,
   initialHeaderName = "Dynamic Input List",
   initialInputs = [],
   setDynamicInputs,
   setInputListCount,
-  inputListCount,
+  inputListCount, title,
+  onUpdate
 }: InputListProps) => {
   const params = useParams();
+  const siteId = decodeURIComponent(params.id as string);
 
-  const id = decodeURIComponent(params.id as string);
   // State for Input List
   const [inputs, setInputs] = useState<InputData[]>(initialInputs);
   const [showInputDialog, setShowInputDialog] = useState(false);
-
-  // State for Header
   const [headerName, setHeaderName] = useState(initialHeaderName);
   const [isEditingHeader, setIsEditingHeader] = useState(false);
-
   const [loadingSave, setloadingSave] = useState(false);
   const [loadingDelete, setloadingDelete] = useState(false);
-
-  //error
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Sync with props when they change
+  useEffect(() => {
+    setInputs(initialInputs);
+  }, [initialInputs]);
+
+  useEffect(() => {
+    setHeaderName(initialHeaderName);
+  }, [initialHeaderName]);
+
   // Input List Functions
   const addInput = (type: InputType) => {
-    setInputs([
+    const newInputs = [
       ...inputs,
       {
         type,
@@ -78,20 +77,48 @@ const InputList = ({
         label: `Field ${inputs.length + 1}`,
         isEditing: false,
       },
-    ]);
+    ];
+    setInputs(newInputs);
     setShowInputDialog(false);
+
+    // Notify parent
+    if (onUpdate) {
+      onUpdate({
+        id,
+        inputListName: headerName,
+        inputs: newInputs
+      });
+    }
   };
 
   const handleInputChange = (index: number, value: string) => {
     const newInputs = [...inputs];
     newInputs[index].value = value;
     setInputs(newInputs);
+
+    // Notify parent
+    if (onUpdate) {
+      onUpdate({
+        id,
+        inputListName: headerName,
+        inputs: newInputs
+      });
+    }
   };
 
   const handleLabelChange = (index: number, label: string) => {
     const newInputs = [...inputs];
     newInputs[index].label = label;
     setInputs(newInputs);
+
+    // Notify parent
+    if (onUpdate) {
+      onUpdate({
+        id,
+        inputListName: headerName,
+        inputs: newInputs
+      });
+    }
   };
 
   const toggleEdit = (index: number) => {
@@ -100,14 +127,35 @@ const InputList = ({
     setInputs(newInputs);
   };
 
-  const deleteInput = (index: number) => {
-    const newInputs = inputs.filter((_, i) => i !== index);
-    setInputs(newInputs);
-  };
+const deleteInput = (index: number) => {
+  const newInputs = inputs.filter((_, i) => i !== index);
+  setInputs(newInputs);
+
+  // Notify parent immediately
+  if (onUpdate) {
+    onUpdate({
+      id,
+      inputListName: headerName,
+      inputs: newInputs
+    });
+  }
+
+
+};
 
   // Header Functions
   const handleHeaderNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setHeaderName(e.target.value);
+    const newName = e.target.value;
+    setHeaderName(newName);
+
+    // Notify parent
+    if (onUpdate) {
+      onUpdate({
+        id,
+        inputListName: newName,
+        inputs: inputs
+      });
+    }
   };
 
   const toggleEditHeader = () => {
@@ -120,16 +168,21 @@ const InputList = ({
       setloadingSave(true);
 
       const structuredData = {
+        id: id || Date.now(),
         inputListName: headerName,
-        inputs: inputs.filter(
-          (input) =>
-            input.type === "text" ||
-            input.type === "number" ||
-            input.type === "date",
-        ),
+        inputs: inputs
       };
+      let newInput: any;
 
-      const newInput = await createDynamicList(id as string, structuredData);
+
+      if (title === "rpt") {
+        newInput = await createRptDynamicList(siteId, structuredData);
+
+      }
+      else {
+        newInput = await createDynamicList(siteId, structuredData);
+
+      }
 
       if (newInput === "rename") {
         setSuccessful(false);
@@ -144,12 +197,18 @@ const InputList = ({
         setMessage("Dynamic Input created successfully");
         setShow(true);
       }
+
+      // Notify parent with the saved data
+      if (onUpdate) {
+        onUpdate(structuredData);
+      }
+
       setloadingSave(false);
     } catch (error) {
       console.log(error);
       setSuccessful(false);
       setloadingSave(false);
-      setMessage("Failed to add input header");
+      setMessage("Failed to save input list");
       setShow(true);
     }
   };
@@ -158,17 +217,13 @@ const InputList = ({
     try {
       setloadingDelete(true);
       const structuredData = {
+        id: id,
         inputListName: headerName,
-        inputs: inputs.filter(
-          (input) =>
-            input.type === "text" ||
-            input.type === "number" ||
-            input.type === "date",
-        ),
+        inputs: inputs
       };
 
       const deleteComponent = await deleteDynamicList(
-        id as string,
+        siteId,
         structuredData,
       );
 
@@ -320,20 +375,23 @@ const InputList = ({
 
       {/* Save Button */}
       <div className="flex justify-end">
-        {loadingDelete ? (
-          <Button className="mr-2" disabled>
-            <Loader2 className="animate-spin" />
-            Please wait
-          </Button>
-        ) : (
-          <Button
-            onClick={handleDeleteComponent}
-            variant="destructive"
-            className="mx-3"
-          >
-            <Trash className="h-4 w-4 mr-2 " /> Delete
-          </Button>
+        {title !== "rpt" && (
+          loadingDelete ? (
+            <Button className="mr-2" disabled>
+              <Loader2 className="animate-spin" />
+              Please wait
+            </Button>
+          ) : (
+            <Button
+              onClick={handleDeleteComponent}
+              variant="destructive"
+              className="mx-3"
+            >
+              <Trash className="h-4 w-4 mr-2" /> Delete
+            </Button>
+          )
         )}
+
 
         {loadingSave ? (
           <Button className="mr-2" disabled>

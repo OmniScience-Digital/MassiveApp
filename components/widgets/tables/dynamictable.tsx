@@ -4,42 +4,37 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash, Edit, Save, Check, Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Trash, Edit, Save, Check, Loader2 } from "lucide-react";
 import { ReportItem } from "@/types/schema";
 import ResponseModal from "../response";
 import {
   createDynamicTable,
+  createrptDynamicTable,
   deleteDynamicTable,
+  deleterptDynamicTable,
 } from "@/service/dynamicTable.service";
 
 export interface DynamicTableProps {
   table: ReportItem["dynamic_tables"];
   tableCount: number;
+  title?: string;
   setDynamictables: React.Dispatch<
     React.SetStateAction<ReportItem["dynamic_tables"]>
   >;
   setDbTableCount: React.Dispatch<React.SetStateAction<number>>;
+  onSave?: (savedTables: ReportItem["dynamic_tables"]) => void;
 }
 
 export default function DynamicTable({
   table,
   tableCount,
   setDbTableCount,
-  setDynamictables,
+  setDynamictables, onSave, title
 }: DynamicTableProps) {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
   const [headerName, setHeaderName] = useState(table[0].tableName);
   const [isEditingHeader, setIsEditingHeader] = useState(false);
-  const [showInputDialog, setShowInputDialog] = useState(false);
   const [loadingSave, setloadingSave] = useState(false);
   const [loadingDelete, setloadingDelete] = useState(false);
 
@@ -85,24 +80,44 @@ export default function DynamicTable({
   }, [headerName, isEditingHeader]);
 
   // Save function
-
   const handleSave = async () => {
     try {
       setloadingSave(true);
 
-      const saveTabletoDb = await createDynamicTable(
-        id as string,
-        tables as ReportItem["dynamic_tables"],
-      );
+      let saveTabletoDb: any;
+
+      if (title === "rpt") {
+        saveTabletoDb = await createrptDynamicTable(
+          id as string,
+          tables as ReportItem["dynamic_tables"],
+        );
+
+      } else {
+        saveTabletoDb = await createDynamicTable(
+          id as string,
+          tables as ReportItem["dynamic_tables"],
+        );
+
+      }
 
       if (saveTabletoDb) {
         setSuccessful(true);
         setMessage(saveTabletoDb.message as unknown as string);
         setloadingSave(false);
         setShow(true);
-        // Update tableCount to match the new state
-        setDynamictables(saveTabletoDb.table);
-        setDbTableCount(tableCount + 1);
+
+        // Use the onSave callback if provided (Option 1 solution)
+        if (onSave) {
+          onSave(saveTabletoDb.table);
+        } else {
+          // Fallback to existing behavior
+          setDynamictables(saveTabletoDb.table);
+          setDbTableCount(tableCount + 1);
+        }
+
+        // Clear editing states
+        setIsEdited(false);
+        setHeaderEdited(false);
       }
     } catch (error) {
       console.error("Error creating table:", error);
@@ -110,8 +125,6 @@ export default function DynamicTable({
       setMessage("Failed to create table");
       setShow(true);
     } finally {
-      setIsEdited(false);
-      setHeaderEdited(false);
       setloadingSave(false);
     }
   };
@@ -120,18 +133,18 @@ export default function DynamicTable({
     const updatedTables = tables.map((table) =>
       table.id === tableId
         ? {
-            ...table,
-            data: [
-              ...table.data,
-              {
-                id: Date.now(),
-                ...table.columns.reduce(
-                  (acc, column) => ({ ...acc, [column]: "" }),
-                  {},
-                ),
-              },
-            ],
-          }
+          ...table,
+          data: [
+            ...table.data,
+            {
+              id: Date.now(),
+              ...table.columns.reduce(
+                (acc, column) => ({ ...acc, [column]: "" }),
+                {},
+              ),
+            },
+          ],
+        }
         : table,
     );
     setTables(updatedTables);
@@ -141,9 +154,9 @@ export default function DynamicTable({
     const updatedTables = tables.map((table) =>
       table.id === tableId
         ? {
-            ...table,
-            data: table.data.filter((row) => row.id !== rowId),
-          }
+          ...table,
+          data: table.data.filter((row) => row.id !== rowId),
+        }
         : table,
     );
     setTables(updatedTables);
@@ -153,13 +166,13 @@ export default function DynamicTable({
     const updatedTables = tables.map((table) =>
       table.id === tableId
         ? {
-            ...table,
-            columns: [...table.columns, `Column ${table.columns.length + 1}`],
-            data: table.data.map((row) => ({
-              ...row,
-              [`Column ${table.columns.length + 1}`]: "",
-            })),
-          }
+          ...table,
+          columns: [...table.columns, `Column ${table.columns.length + 1}`],
+          data: table.data.map((row) => ({
+            ...row,
+            [`Column ${table.columns.length + 1}`]: "",
+          })),
+        }
         : table,
     );
     setTables(updatedTables);
@@ -171,14 +184,14 @@ export default function DynamicTable({
       const updatedTables = tables.map((table) =>
         table.id === tableId
           ? {
-              ...table,
-              columns: table.columns.filter((_, i) => i !== columnIndex),
-              data: table.data.map((row) => {
-                const newRow = { ...row };
-                delete newRow[table.columns[columnIndex]];
-                return newRow;
-              }),
-            }
+            ...table,
+            columns: table.columns.filter((_, i) => i !== columnIndex),
+            data: table.data.map((row) => {
+              const newRow = { ...row };
+              delete newRow[table.columns[columnIndex]];
+              return newRow;
+            }),
+          }
           : table,
       );
       setTables(updatedTables);
@@ -194,13 +207,13 @@ export default function DynamicTable({
     const updatedTables = tables.map((table) =>
       table.id === tableId
         ? {
-            ...table,
-            data: table.data.map((row) =>
-              row.id === rowId
-                ? { ...row, [table.columns[columnIndex]]: value }
-                : row,
-            ),
-          }
+          ...table,
+          data: table.data.map((row) =>
+            row.id === rowId
+              ? { ...row, [table.columns[columnIndex]]: value }
+              : row,
+          ),
+        }
         : table,
     );
     setTables(updatedTables);
@@ -208,11 +221,24 @@ export default function DynamicTable({
 
   const handleDeleteComponent = async () => {
     try {
+      let sites: any;
+
       setloadingDelete(true);
-      const sites = await deleteDynamicTable(
-        id as string,
-        tables[0].id as number,
-      );
+
+      if (title === "rpt") {
+        sites = await deleterptDynamicTable(
+          id as string,
+          tables[0].id as number,
+        );
+
+      } else {
+        sites = await deleteDynamicTable(
+          id as string,
+          tables[0].id as number,
+        );
+
+      }
+
 
       setDynamictables(sites);
       setSuccessful(true);
@@ -279,21 +305,7 @@ export default function DynamicTable({
       </div>
 
       <div className="space-y-4">
-        <Dialog open={showInputDialog} onOpenChange={setShowInputDialog}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="icon" className="mb-4">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Input Field</DialogTitle>
-              <DialogDescription>
-                Please select available inputs.
-              </DialogDescription>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
+
 
         {tables.map((table) => (
           <div
@@ -329,21 +341,21 @@ export default function DynamicTable({
                             const updatedTables = tables.map((t) =>
                               t.id === table.id
                                 ? {
-                                    ...t,
-                                    columns: t.columns.map((col, i) =>
-                                      i === columnIndex ? e.target.value : col,
-                                    ),
-                                    data: t.data.map((row) => {
-                                      const newRow = { ...row };
-                                      const oldKey = column;
-                                      const newKey = e.target.value;
-                                      if (oldKey in newRow) {
-                                        newRow[newKey] = newRow[oldKey];
-                                        delete newRow[oldKey];
-                                      }
-                                      return newRow;
-                                    }),
-                                  }
+                                  ...t,
+                                  columns: t.columns.map((col, i) =>
+                                    i === columnIndex ? e.target.value : col,
+                                  ),
+                                  data: t.data.map((row) => {
+                                    const newRow = { ...row };
+                                    const oldKey = column;
+                                    const newKey = e.target.value;
+                                    if (oldKey in newRow) {
+                                      newRow[newKey] = newRow[oldKey];
+                                      delete newRow[oldKey];
+                                    }
+                                    return newRow;
+                                  }),
+                                }
                                 : t,
                             );
                             setTables(updatedTables);

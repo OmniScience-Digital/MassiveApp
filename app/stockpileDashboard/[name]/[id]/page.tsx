@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import Navbar from "@/components/layout/navbar";
 import DynamicTable from "@/components/widgets/tables/dynamictable";
 import InputList from "@/components/widgets/InputList";
-import InputData from "../../../../types/inputdata";
 import { Button } from "@/components/ui/button";
 import { ReportItem } from "@/types/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +33,7 @@ import { deleteFormula } from "@/service/formulas.Service";
 import { runStockpileReport } from "@/app/api/stockpile.route";
 import { Switch } from "@/components/ui/switch";
 import Timewidget from "@/components/widgets/Date/sitetime";
+import { DynamicInputItem, InputData } from "@/types/dynamic-inputs";
 
 export default function DashboardPage() {
   const params = useParams();
@@ -49,17 +49,13 @@ export default function DashboardPage() {
   const [primaryScales, setPrimaryScales] = useState<string[]>([]);
   const [formulas, setFormulas] = useState<ReportItem["formulas"]>([]);
 
-  const [dynamicinput, setDynamicInputs] = useState<
-    ReportItem["dynamic_inputs"]
-  >([]);
-  const [dynamictables, setDynamictables] = useState<
-    ReportItem["dynamic_tables"]
-  >([]);
-  const [loadinbtn, setLoadingBtn] = useState(false);
 
+  const [loadinbtn, setLoadingBtn] = useState(false);
   const [tableCount, setTableCount] = useState(0);
   const [dbtableCount, setDbTableCount] = useState(0);
   const [inputListCount, setInputListCount] = useState(0);
+  const [dynamicInputs, setDynamicInputs] = useState<DynamicInputItem[]>([]);
+  const [dynamictables, setDynamictables] = useState<ReportItem["dynamic_tables"]>([]);
   const [selectedValue, setSelectedValue] = useState("");
   const [showStockpile, setShowStockpile] = useState(false);
   const [stockpileNumber, setStockpileNumber] = useState("");
@@ -333,6 +329,39 @@ export default function DashboardPage() {
     }
   };
 
+  // Handle adding a new input list
+  const handleAddInputList = () => {
+    const newInputList: DynamicInputItem = {
+      id: Date.now(), // unique ID
+      inputListName: "Custom Header",
+      inputs: initialInputs
+    };
+    setDynamicInputs([...dynamicInputs, newInputList]);
+    setInputListCount(prev => prev + 1);
+  };
+
+  // Handle updates from child InputList
+  const handleUpdateInputList = (updatedData: DynamicInputItem) => {
+    if (!updatedData.id) return;
+
+    setDynamicInputs(prev =>
+      prev.map(item =>
+        item.id === updatedData.id ? { ...item, ...updatedData } : item
+      )
+    );
+  };
+
+
+  const handleTableSaved = (savedTables: ReportItem["dynamic_tables"]) => {
+    // Update the dynamictables state with saved data from database
+    setDynamictables(savedTables);
+    // Reset tableCount to remove the temporary "new table" UI
+    setTableCount(0);
+    // Update the db table count
+    setDbTableCount(savedTables.length);
+  };
+
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <Navbar />
@@ -521,56 +550,46 @@ export default function DashboardPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 p-2">
                       {/* this loads from the database   */}
-                      {dynamicinput.map((item, index) => (
+                      {dynamicInputs.map((item, index) => (
                         <InputList
-                          key={index}
+                          key={item.id || index}
+                          id={item.id}
                           initialHeaderName={item.inputListName}
                           initialInputs={item.inputs}
                           setDynamicInputs={setDynamicInputs}
                           setInputListCount={setInputListCount}
                           inputListCount={inputListCount}
+                          onUpdate={handleUpdateInputList}
                         />
                       ))}
 
-                      {/* this creates them dynamically */}
-                      {Array.from({ length: inputListCount }).map(
-                        (_, index) => (
-                          <InputList
-                            key={`input-${index}`}
-                            initialHeaderName="Custom Header"
-                            initialInputs={initialInputs}
-                            setDynamicInputs={setDynamicInputs}
-                            setInputListCount={setInputListCount}
-                            inputListCount={inputListCount}
-                          />
-                        ),
-                      )}
                     </div>
 
                     {/* Render Tables */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2">
+                      {/* Render existing tables from database */}
+                      {dynamictables.map((item, index) => (
+                        <DynamicTable
+                          key={item.id || index}
+                          table={[item]}
+                          setDynamictables={setDynamictables}
+                          setDbTableCount={setDbTableCount}
+                          tableCount={dbtableCount}
+                          onSave={handleTableSaved}  // Add this prop
+                        />
+                      ))}
 
-                    <div className="grid grid-cols-1   lg:grid-cols-2 gap-2 p-2">
-                      {dynamictables.length > 0 &&
-                        dynamictables.map((item, index) => (
-                          <DynamicTable
-                            key={index}
-                            table={[item]}
-                            setDynamictables={setDynamictables}
-                            setDbTableCount={setDbTableCount}
-                            tableCount={dbtableCount}
-                          />
-                        ))}
-
+                      {/* Render new tables being created */}
                       {Array.from({ length: tableCount }).map((_, index) => (
                         <DynamicTable
-                          key={`table-${index}`}
+                          key={`new-table-${Date.now()}-${index}`}
                           table={initialTable}
                           setDynamictables={setDynamictables}
                           setDbTableCount={setDbTableCount}
                           tableCount={dbtableCount}
+                          onSave={handleTableSaved}  // Add this prop
                         />
                       ))}
                     </div>

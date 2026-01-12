@@ -31,6 +31,7 @@ export type ReportItem = {
   audit?: boolean;
   progressive?: boolean;
   hourly?: boolean;
+   rpt?: boolean;
   siteStatus: string;
   siteConstants: {
     siteName: string;
@@ -80,6 +81,21 @@ export type ReportItem = {
     }[];
   }[];
   dynamic_tables: {
+    id: number;
+    tableName: string;
+    columns: string[];
+    data: { [key: string]: any }[];
+  }[];
+    rpt_inputs?: {
+    inputListName: string;
+    inputs: {
+      type: "text" | "number" | "date";
+      value: any;
+      label: string;
+      isEditing: boolean;
+    }[];
+  }[];
+  rpt_tables?: {
     id: number;
     tableName: string;
     columns: string[];

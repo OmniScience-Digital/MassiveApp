@@ -23,6 +23,9 @@ const times = Array.from({ length: 24 * 4 }, (_, i) =>
     .format("HH:mm"),
 );
 
+times.push('23:59'); // add a no shift time
+
+
 export default function TimeRangePicker({
   label,
   Start,

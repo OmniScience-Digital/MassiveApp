@@ -672,7 +672,7 @@ export default function DashboardPage() {
                                     <Card>
                                         <CardHeader>
                                             <CardTitle className="text-base">Site Schedules</CardTitle>
-                                            <CardDescription>Configure shift timings and operation hours</CardDescription>
+                                            <CardDescription>NB: To disable a shift, set both the shift start and shift end to 23:59.</CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <Timewidget

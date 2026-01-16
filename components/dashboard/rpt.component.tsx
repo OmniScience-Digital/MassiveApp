@@ -85,12 +85,11 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
         const dateIndexTable: ReportItem["dynamic_tables"][0] = {
             id: Date.now(),
             tableName: "Date Index",
-            columns: ["Date", "Date Index", "Tons Achieved"],
+            columns: ["Date", "Date Index"],
             data: dateIndex.map((item, index) => ({
                 id: index + 1,
                 "Date": item.date,
                 "Date Index": "1",  // All rows get "1" initially
-                "Tons Achieved": ""
             }))
         };
 

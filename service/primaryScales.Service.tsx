@@ -5,8 +5,7 @@ export const updatePrimaryScales = async (
   primaryScales: string[],
 ) => {
   try {
-    console.log("Updating site:", id);
-    console.log("New primary scales:", primaryScales);
+
 
     // 1. Fetch existing site data
     const { data: site, errors } = await client.models.Sites.get({ id });
@@ -43,8 +42,7 @@ export const updatePrimaryScales = async (
       ? [...primaryScales]
       : [];
 
-    console.log("Updated site config:", JSON.stringify(parsedSite, null, 2));
-
+  
     // 4. Save changes
     const updateResponse = await client.models.Sites.update({
       id,

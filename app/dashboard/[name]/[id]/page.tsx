@@ -8,7 +8,7 @@ import Navbar from "@/components/layout/navbar";
 import DynamicTable from "@/components/widgets/tables/dynamictable";
 import InputList from "@/components/widgets/InputList";
 import { Button } from "@/components/ui/button";
-import { ReportItem } from "@/types/schema";
+import { ReportItem, SiteConstantsInterface } from "@/types/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     DropdownMenu,
@@ -273,9 +273,7 @@ export default function DashboardPage() {
         await updateSiteStatusById(id, newValue);
     };
 
-    const handleSelectedScales = (selectedScales: string[]) => {
-        console.log(`Selected scales: ${selectedScales.join(", ")}`);
-    };
+
 
     const logSelectedShift = async (shift: string) => {
         try {
@@ -472,13 +470,55 @@ export default function DashboardPage() {
         setDbTableCount(savedTables.length);
     };
 
+    const handleSiteConstantsUpdate = (updatedConstants: SiteConstantsInterface) => {
+        if (sitedata) {
+            setSiteData({
+                ...sitedata,
+                siteConstants: updatedConstants
+            });
+        }
+    };
+
+
+    const handleSiteHeadersUpdate = (updatedheaders: ReportItem["headers"]) => {
+
+        // Update the headers state variable
+        setHeaders(updatedheaders);
+
+        if (sitedata) {
+            setSiteData({
+                ...sitedata,
+                headers: updatedheaders
+            });
+        }
+
+    };
+
+    const handleprimaryScalesUpdate = (updatedprimaryScales: string[]) => {
+        setPrimaryScales(updatedprimaryScales);
+        if (sitedata) {
+            setSiteData({
+                ...sitedata,
+                primaryScales: updatedprimaryScales
+            });
+        }
+    };
+
+    const handleScalesUpdate = (updatedScales: ReportItem["scales"]) => {
+
+        setScales(updatedScales);
+        if (sitedata) {
+            setSiteData({
+                ...sitedata,
+                scales: updatedScales
+            });
+        }
+    };
 
 
     return (
         <div className="flex flex-col h-screen bg-background text-foreground">
             <Navbar />
-
-
 
             {loading ? (
                 <Loading />
@@ -694,7 +734,7 @@ export default function DashboardPage() {
                                             <CardContent>
                                                 <SiteConstants
                                                     siteConstants={sitedata.siteConstants}
-                                                    fetchData={fetchData}
+                                                    onUpdate={handleSiteConstantsUpdate}
                                                 />
                                             </CardContent>
                                         </Card>
@@ -705,7 +745,7 @@ export default function DashboardPage() {
                                                 <CardDescription>Report headers and labels</CardDescription>
                                             </CardHeader>
                                             <CardContent>
-                                                <DynamicinputList headers={headers} />
+                                                <DynamicinputList headers={headers} onUpdate={handleSiteHeadersUpdate} />
                                             </CardContent>
                                         </Card>
 
@@ -718,7 +758,7 @@ export default function DashboardPage() {
                                                 <PrimaryScalesSelector
                                                     scales={scales}
                                                     primaryScales={primaryScales}
-                                                    onSave={handleSelectedScales}
+                                                    onUpdate={handleprimaryScalesUpdate}
                                                 />
                                             </CardContent>
                                         </Card>
@@ -772,7 +812,7 @@ export default function DashboardPage() {
                                             <SharedTable
                                                 title={["Scale", "Iccid", "Mtd Opening"]}
                                                 scales={scales}
-                                                fetchData={fetchData}
+                                                onUpdate={handleScalesUpdate}
                                             />
                                         </CardContent>
                                     </Card>

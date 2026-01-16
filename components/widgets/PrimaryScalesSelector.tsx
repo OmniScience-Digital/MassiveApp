@@ -14,13 +14,13 @@ interface PrimaryScalesSelectorProps {
     iccid: string;
   }[];
   primaryScales: string[];
-  onSave: (selectedScales: string[]) => void;
+  onUpdate?: (primaryScales: string[]) => void;
 }
 
 export const PrimaryScalesSelector = ({
   scales,
   primaryScales,
-  onSave,
+  onUpdate,
 }: PrimaryScalesSelectorProps) => {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
@@ -124,7 +124,11 @@ export const PrimaryScalesSelector = ({
         setRemovedScales([]);
 
         // Notify parent component
-        onSave(finalScales);
+
+
+        if (onUpdate) {
+          onUpdate(finalScales);
+        }
       } else {
         throw new Error("Failed to update primary scales");
       }
@@ -187,16 +191,16 @@ export const PrimaryScalesSelector = ({
                   {/* Show remove button only for custom scales */}
                   {(persistedCustomScales.includes(scale.scalename) ||
                     customScales.includes(scale.scalename)) && (
-                    <button
-                      onClick={(e) =>
-                        handleRemoveCustomScale(scale.scalename, e)
-                      }
-                      className="ml-2 text-red-500 hover:text-red-700"
-                      aria-label={`Remove ${scale.scalename}`}
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
+                      <button
+                        onClick={(e) =>
+                          handleRemoveCustomScale(scale.scalename, e)
+                        }
+                        className="ml-2 text-red-500 hover:text-red-700"
+                        aria-label={`Remove ${scale.scalename}`}
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
                 </label>
               </div>
             ))}

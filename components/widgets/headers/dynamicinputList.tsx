@@ -12,7 +12,12 @@ import { Loader2 } from "lucide-react";
 import { ConfirmDialog } from "../deletedialog";
 import ResponseModal from "../response";
 
-const DynamicInputList = ({ headers }: { headers: ReportItem["headers"] }) => {
+interface HeadersProps{
+headers: ReportItem["headers"],
+  onUpdate?: (updatedConstants:  ReportItem["headers"]) => void;
+}
+
+const DynamicInputList = ({ headers ,onUpdate}: HeadersProps) => {
   const params = useParams();
   const id = decodeURIComponent(params.id as string);
 
@@ -39,61 +44,96 @@ const DynamicInputList = ({ headers }: { headers: ReportItem["headers"] }) => {
     setInputs([...inputs, { headername: "" }]);
   };
 
-  const handleSave = async () => {
+const handleSave = async () => {
     try {
-      const isValid = inputs[index]?.headername?.trim() !== "";
+        const isValid = inputs[index]?.headername?.trim() !== "";
 
-      if (isValid) {
-        setLoadingBtn(true);
+        if (isValid) {
+            setLoadingBtn(true);
 
-        const createheaders = await createSiteHeaders(id, {
-          headername: inputs[index].headername,
-        });
+            // Save to backend
+            await createSiteHeaders(id, {
+                headername: inputs[index].headername,
+            });
 
-        setSuccessful(true);
-        setMessage("Header created successfully");
-        setShow(true);
-      } else {
-        handleRemoveInput(index);
-        setSuccessful(false);
-        setMessage("Failed to header");
-        setShow(true);
-      }
+            // ✅ Create a NEW array with updated values
+            const updatedHeaders = inputs.map((header, i) => 
+                i === index 
+                    ? { ...header, headername: inputs[index].headername }
+                    : header
+            );
+            
+
+            // ✅ Update parent with the NEW array
+            if (onUpdate) {
+                onUpdate(updatedHeaders);
+            }
+            
+            setSuccessful(true);
+            setMessage("Header created successfully");
+            setShow(true);
+        } else {
+            // Handle invalid input
+            const filteredHeaders = inputs.filter((_, i) => i !== index);
+            setInputs(filteredHeaders);
+
+            if (onUpdate) {
+                onUpdate(filteredHeaders);
+            }
+            
+            setSuccessful(false);
+            setMessage("Invalid header name");
+            setShow(true);
+        }
     } catch (error) {
-      setLoadingBtn(false);
-      console.log(error);
+        setLoadingBtn(false);
+        console.log(error);
     } finally {
-      setLoadingBtn(false);
+        setLoadingBtn(false);
     }
-  };
+};
 
   const handleRemoveInput = (index: number) => {
     setDeleteIndex(index); // Store index of item to delete
     setOpendelete(true); // Open confirmation dialog
   };
 
-  const handleDeleteConfirmation = async () => {
+const handleDeleteConfirmation = async () => {
     if (deleteIndex !== null) {
-      try {
-        const headerToDelete = inputs[deleteIndex]; // Get the header
-        setInputs(inputs.filter((_, i) => i !== deleteIndex)); // Remove it from UI
+        try {
+            const headerToDelete = inputs[deleteIndex];
+            
+            // ✅ Create a NEW filtered array
+            const updatedHeaders = inputs.filter((_, i) => i !== deleteIndex);
+            
+            // Update local state
+            setInputs(updatedHeaders);
+            
+            console.log("After delete, passing to parent:", updatedHeaders);
+            
+            // ✅ Update parent with NEW array
+            if (onUpdate) {
+                onUpdate(updatedHeaders);
+            }
+            
+            setOpendelete(false);
+            
+            // Delete from backend
+            await deleteSiteHeader(id, { headername: headerToDelete.headername });
 
-        setOpendelete(false);
-        await deleteSiteHeader(id, { headername: headerToDelete.headername }); // Delete from backend
-
-        setSuccessful(true);
-        setMessage("Header updated successfully");
-        setShow(true);
-      } catch (error) {
-        console.log(error);
-        setSuccessful(false);
-        setMessage("Failed to delete header");
-        setShow(true);
-      } finally {
-        setDeleteIndex(null); // Reset delete index
-      }
+            setSuccessful(true);
+            setMessage("Header deleted successfully");
+            setShow(true);
+        } catch (error) {
+            console.log(error);
+            setSuccessful(false);
+            setMessage("Failed to delete header");
+            setShow(true);
+        } finally {
+            setDeleteIndex(null);
+        }
     }
-  };
+};
 
   return (
     <div className="px-6 py-2 border h-full w-full rounded-lg shadow-sm bg-background space-y-4">

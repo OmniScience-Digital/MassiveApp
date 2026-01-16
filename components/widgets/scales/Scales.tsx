@@ -28,6 +28,7 @@ import {
   updateTelegramScale,
   deleteTelegramScale,
 } from "@/service/scales.Service";
+import { ReportItem } from "@/types/schema";
 
 interface ScaleRow {
   id?: string;
@@ -40,10 +41,10 @@ interface ScaleRow {
 interface SharedTableProps {
   title: string[];
   scales: ScaleRow[];
-  fetchData: () => void;
+  onUpdate?: (primaryScales: ReportItem["scales"]) => void;
 }
 
-const SharedTable = ({ title, scales, fetchData }: SharedTableProps) => {
+const SharedTable = ({ title, scales, onUpdate }: SharedTableProps) => {
   const { id } = useParams<{ id: string }>();
 
   const [rows, setRows] = useState<ScaleRow[]>(scales);
@@ -68,15 +69,15 @@ const SharedTable = ({ title, scales, fetchData }: SharedTableProps) => {
 
   const handleChange =
     (idx: number, columnName: string) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { value } = e.target;
-      const updatedRows = [...rows];
-      updatedRows[idx] = {
-        ...updatedRows[idx],
-        [columnName]: value,
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = e.target;
+        const updatedRows = [...rows];
+        updatedRows[idx] = {
+          ...updatedRows[idx],
+          [columnName]: value,
+        };
+        setRows(updatedRows);
       };
-      setRows(updatedRows);
-    };
 
   const handleAddRow = () => {
     const newItem: ScaleRow = {
@@ -92,6 +93,7 @@ const SharedTable = ({ title, scales, fetchData }: SharedTableProps) => {
     setConfirmDialogOpen(true);
   };
 
+
   const confirmDelete = async () => {
     if (indexToDelete === null || !rowToDelete) return;
 
@@ -99,18 +101,22 @@ const SharedTable = ({ title, scales, fetchData }: SharedTableProps) => {
     updatedRows.splice(indexToDelete, 1);
     setRows(updatedRows);
 
+
     try {
       await deleteTelegramScale(id as string, rowToDelete);
       setShow(true);
       setSuccessful(true);
       setMessage("Scale deleted successfully");
-      fetchData();
 
-      // onScaleupdate();
+
+      if (onUpdate) {
+        onUpdate(updatedRows);
+      }
+
     } catch (error) {
       setShow(true);
       setSuccessful(false);
-      setMessage("Failed to  delete scale");
+      setMessage("Failed to delete scale");
     } finally {
       setConfirmDialogOpen(false);
       setRowToDelete(null);
@@ -119,10 +125,10 @@ const SharedTable = ({ title, scales, fetchData }: SharedTableProps) => {
   };
 
   const handleSaveRow = async (row: ScaleRow, rowIndex: number) => {
-    // Set loading state for the specific row
     setLoadingRows((prev) => ({ ...prev, [rowIndex]: true }));
 
     const exists = scales.some((scale) => scale.scalename === row.scalename);
+
 
     try {
       if (!exists) {
@@ -134,10 +140,19 @@ const SharedTable = ({ title, scales, fetchData }: SharedTableProps) => {
           });
 
           if (createScale) {
+            // Update local state after successful save
+            const updatedRows = [...rows];
+            updatedRows[rowIndex] = row;
+            setRows(updatedRows);
+
+            if (onUpdate) {
+              onUpdate(updatedRows);
+            }
+
             setShow(true);
             setSuccessful(true);
             setMessage("Scale created successfully");
-            fetchData();
+
           } else {
             setSuccessful(false);
             setMessage("Failed to create scale");
@@ -145,10 +160,11 @@ const SharedTable = ({ title, scales, fetchData }: SharedTableProps) => {
           }
         }
       } else {
-        // If the row has an id, it's an existing row
+        // Update local state immediately
         const updatedRows = [...rows];
         updatedRows[rowIndex] = row;
         setRows(updatedRows);
+
 
         await updateTelegramScale(id as string, {
           scalename: row.scalename,
@@ -156,17 +172,21 @@ const SharedTable = ({ title, scales, fetchData }: SharedTableProps) => {
           openingScaletons: row.openingScaletons,
         });
 
+
         setShow(true);
         setSuccessful(true);
         setMessage("Scale updated successfully");
-        fetchData();
+
+        if (onUpdate) {
+          onUpdate(updatedRows);
+        }
+
       }
     } catch (error) {
       setShow(true);
-      setSuccessful(true);
+      setSuccessful(false);
       setMessage("Failed to save scale");
     } finally {
-      // Reset loading state for that row
       setLoadingRows((prev) => ({ ...prev, [rowIndex]: false }));
     }
   };

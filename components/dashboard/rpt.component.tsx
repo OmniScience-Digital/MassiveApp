@@ -43,7 +43,7 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
         const currentDate = new Date(start);
         const dateIndex = [];
 
-        while (currentDate <= end) {
+        while (currentDate < end) {
             dateIndex.push({
                 date: currentDate.toISOString().split('T')[0], // YYYY-MM-DD format
                 value: ""
@@ -152,10 +152,35 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
         }
 
         // 1. Add InputList for basic configuration
+
         const basicConfigInput: DynamicInputItem = {
             id: `rpt-basic-${Date.now()}`,
             inputListName: "RPT Basic Configuration",
             inputs: [
+                {
+                    type: "text",
+                    value: "",
+                    label: "RPT Sitename",
+                    isEditing: false
+                },
+                {
+                    type: "number",
+                    value: "",
+                    label: "Total Monthly Fixed Cost",
+                    isEditing: false
+                },
+                {
+                    type: "number",
+                    value: "",
+                    label: "Total Monthly Maintenance Budget",
+                    isEditing: false
+                },
+                {
+                    type: "number",
+                    value: "",
+                    label: "Total Minimum Return",
+                    isEditing: false
+                },
                 {
                     type: "datetime-local",
                     value: "",
@@ -168,6 +193,7 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
                     label: "Month End Date and Time",
                     isEditing: false
                 },
+
                 {
                     type: "number",
                     value: "",

@@ -5,6 +5,7 @@ export interface InputData {
   value: string;
   label: string;
   isEditing: boolean;
+  isHidden?: boolean; 
 }
 
 export interface DynamicInputItem {

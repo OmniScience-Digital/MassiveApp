@@ -39,6 +39,9 @@ const Automatedreporting = () => {
   const [checkedItemsRPT, setCheckedItemsRPT] = useState<
     Record<string, boolean>
   >({});
+   const [checkedItemsFTP, setCheckedItemsFTP] = useState<
+    Record<string, boolean>
+  >({});
 
 
   //stop times state
@@ -87,6 +90,7 @@ const Automatedreporting = () => {
 
   useEffect(() => { }, [stopTimes]); // This will run whenever stopTimes changes
 
+  //check hourly ,progressive , ftp etc
   useEffect(() => {
     if (submittedsites.length > 0) {
       const initialCheckedState = submittedsites.reduce(
@@ -124,6 +128,16 @@ const Automatedreporting = () => {
         {} as Record<string, boolean>,
       );
       setCheckedItemsRPT(initialCheckedStateRPT);
+
+
+         const initialCheckedStateFTP = submittedsites.reduce(
+        (acc, site) => {
+          acc[site.id] = site.ftp || false;
+          return acc;
+        },
+        {} as Record<string, boolean>,
+      );
+      setCheckedItemsFTP(initialCheckedStateFTP);
     }
   }, [submittedsites]);
 
@@ -505,6 +519,52 @@ const Automatedreporting = () => {
           }}
         />
       ),
+    }, {
+      accessorKey: "ftp",
+      header: "FTP",
+      cell: ({ row }: { row: any }) => (
+        <Checkbox
+          checked={checkedItemsFTP[row.original.id] || false}
+          onCheckedChange={async (checked) => {
+            const isChecked = Boolean(checked);
+            const siteId = row.original.id;
+
+            setCheckedItemsFTP((prev) => ({
+              ...prev,
+              [siteId]: isChecked,
+            }));
+
+            try {
+              const { data: siteModel, errors } =
+                await client.models.Sites.get({ id: siteId });
+
+              if (errors || !siteModel?.site) return;
+
+              const parsedSite =
+                typeof siteModel.site === "string"
+                  ? JSON.parse(siteModel.site)
+                  : siteModel.site;
+
+              const updatedSite = {
+                ...parsedSite,
+                ftp: isChecked,
+              };
+
+              await client.models.Sites.update({
+                id: siteId,
+                site: JSON.stringify(updatedSite),
+              });
+
+              console.log(`FTP status updated for site ID: ${siteId}`);
+            } catch (err) {
+              console.error(
+                `Failed to update FTP status for site ID: ${siteId}`,
+                err,
+              );
+            }
+          }}
+        />
+      ),
     }
 
   ];
@@ -524,7 +584,8 @@ const Automatedreporting = () => {
         audit: checkedItems[site.id] || false, // Use the checkedItems state
         progressive: checkedItemsProgressive[site.id] || false, // Use the checkedItemsProgressive state
         hourly: checkedItemsHourly[site.id] || false, // Use the checkedItemsHourly state
-        rpt: checkedItemsRPT[site.id] || false, // Use the checkedItemsHourly state
+        rpt: checkedItemsRPT[site.id] || false, // Use the checkedItemsRTP state
+         ftp: checkedItemsFTP[site.id] || false, // Use the checkedItemsFTP state
       };
     })
     : [];
@@ -534,6 +595,10 @@ const Automatedreporting = () => {
       <Navbar />
 
       <main className="flex-1 p-1 h-f mt-20">
+           {loading ? (
+          <Loading />
+        ) : (
+          <>
         <div className="flex justify-end mb-2">
           <Button onClick={handleOpenModal} className="ml-auto cursor-pointer">
             Add Site
@@ -546,10 +611,7 @@ const Automatedreporting = () => {
           />
         </div>
 
-        {loading ? (
-          <Loading />
-        ) : (
-          <>
+     
             {show && (
               <ResponseModal
                 successful={successful}

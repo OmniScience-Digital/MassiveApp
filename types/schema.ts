@@ -31,7 +31,8 @@ export type ReportItem = {
   audit?: boolean;
   progressive?: boolean;
   hourly?: boolean;
-   rpt?: boolean;
+  rpt?: boolean;
+  ftp?: boolean;
   siteStatus: string;
   siteConstants: {
     siteName: string;

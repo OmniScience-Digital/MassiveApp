@@ -178,7 +178,7 @@ const Timewidget = ({ siteTimes_input, fetchData }: TimewidgetProps) => {
       {show24HourToggle && (
         <div className="flex items-center justify-between p-2 border rounded-md">
           <label htmlFor="24hour-toggle" className="text-sm font-medium">
-            24-Hour Operation
+            Enable 24hr shift
           </label>
           <div className="relative inline-block w-10 mr-2 align-middle select-none">
             <div className="flex items-center space-x-2">

@@ -51,7 +51,9 @@ const Timewidget = ({ siteTimes_input, fetchData }: TimewidgetProps) => {
 
   // Check if toggle should be shown
   const show24HourToggle =
-    siteTimes_input.nightStart !== siteTimes_input.nightStop;
+  siteTimes_input.nightStart !== siteTimes_input.nightStop &&
+  siteTimes_input.nightStart !== '23:59' &&
+  siteTimes_input.nightStop !== '23:59';
 
   // State for switch
   const [is24Hour, setIs24Hour] = useState(

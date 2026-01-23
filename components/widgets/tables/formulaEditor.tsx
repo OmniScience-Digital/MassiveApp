@@ -286,7 +286,7 @@ export const FormulaEditor = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Formulaw</label>
+              <label className="block text-sm font-medium mb-1">Formular</label>
               <div className="p-3 border rounded bg-gray-50 min-h-12 font-mono mb-2">
                 {editingFormula?.formula || (
                   <span className="text-black">

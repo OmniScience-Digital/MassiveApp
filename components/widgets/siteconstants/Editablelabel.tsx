@@ -61,16 +61,18 @@ const EditableLabel: React.FC<EditableLabelProps> = ({
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {isEditing ? (
           <>
-            {label === "reportTo" ||
-            label === "shiftftp" ||
-            label === "scaleType" ||
-            label === "siteType" ? (
+            {label === "reportTo" || label === "shiftftp" || label === "scaleType" || label === "template" || label === "siteType" ? (
               <Select value={editedValue} onValueChange={setEditedValue}>
                 <SelectTrigger className="min-w-[120px]">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
-                  {label === "reportTo" ? (
+                  {label === "template" ? (
+                    <>
+                      <SelectItem value="Default">Default</SelectItem>
+                      <SelectItem value="Split flow Graphs">Split flow graphs</SelectItem>
+                    </>
+                  ) : label === "reportTo" ? (
                     <>
                       <SelectItem value="Email">Email</SelectItem>
                       <SelectItem value="Telegram">Telegram</SelectItem>
@@ -141,75 +143,72 @@ const EditableSiteConstants = ({
   const id = decodeURIComponent(params.id as string);
 
   // Create local state that mirrors the props
-  const [localSiteConstants, setLocalSiteConstants] =
-    useState<SiteConstantsInterface>(siteConstants);
+  const [localSiteConstants, setLocalSiteConstants] = useState<SiteConstantsInterface>({
+    ...siteConstants,
+    template: siteConstants.template || ""
+  });
+
 
   const [show, setShow] = useState(false);
-
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Update local state when props change
-  useEffect(() => {
-    setLocalSiteConstants(siteConstants);
-  }, [siteConstants]);
 
-  
   const handleSave = async (key: string, newValue: string) => {
-  // Save currentValue at the beginning so it's available in catch block
-  const currentValue = localSiteConstants[key as keyof SiteConstantsInterface];
+    // Save currentValue at the beginning so it's available in catch block
+    const currentValue = localSiteConstants[key as keyof SiteConstantsInterface];
 
-  // Don't proceed if value hasn't changed
-  if (newValue === String(currentValue)) {
-    return;
-  }
-
-  try {
-    // 1. Save previous value for potential rollback
-    const previousValue = currentValue;
-    
-    // 2. Create updated constants
-    const updatedConstants = {
-      ...localSiteConstants,
-      [key]: newValue,
-    };
-    
-    // 3. Update LOCAL state immediately
-    setLocalSiteConstants(updatedConstants);
-    
-    // 4. Update PARENT state immediately
-    if (onUpdate) {
-      onUpdate(updatedConstants);
+    // Don't proceed if value hasn't changed
+    if (newValue === String(currentValue)) {
+      return;
     }
 
-    // 5. Send to server
-    await updateSiteConstants(id as string, updatedConstants);
-    
-    setSuccessful(true);
-    setMessage("Constant updated successfully");
-    setShow(true);
-    
-    // DON'T call fetchData() - we already updated both states
-  } catch (error) {
-    console.error(`Failed to update ${newValue}:`, error);
-    
-    // Revert BOTH states on error
-    const revertedConstants = {
-      ...localSiteConstants,
-      [key]: String(currentValue),
-    };
-    
-    setLocalSiteConstants(revertedConstants);
-    
-    if (onUpdate) {
-      onUpdate(revertedConstants);
+    try {
+      // 1. Save previous value for potential rollback
+      const previousValue = currentValue;
+
+      // 2. Create updated constants
+      const updatedConstants = {
+        ...localSiteConstants,
+        [key]: newValue,
+      };
+
+      // 3. Update LOCAL state immediately
+      setLocalSiteConstants(updatedConstants);
+
+      // 4. Update PARENT state immediately
+      if (onUpdate) {
+        onUpdate(updatedConstants);
+      }
+
+      // 5. Send to server
+      await updateSiteConstants(id as string, updatedConstants);
+
+      setSuccessful(true);
+      setMessage("Constant updated successfully");
+      setShow(true);
+
+      // DON'T call fetchData() - we already updated both states
+    } catch (error) {
+      console.error(`Failed to update ${newValue}:`, error);
+
+      // Revert BOTH states on error
+      const revertedConstants = {
+        ...localSiteConstants,
+        [key]: String(currentValue),
+      };
+
+      setLocalSiteConstants(revertedConstants);
+
+      if (onUpdate) {
+        onUpdate(revertedConstants);
+      }
+
+      setSuccessful(false);
+      setMessage("Failed to update constant");
+      setShow(true);
     }
-    
-    setSuccessful(false);
-    setMessage("Failed to update constant");
-    setShow(true);
-  }
-};
+  };
 
 
   return (

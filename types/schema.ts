@@ -22,6 +22,7 @@ export type SiteConstantsInterface = {
   email: string;
   reporttype: string;
   reportTo: string;
+  template?:string;
 };
 
 export type InputType = "table";
@@ -46,6 +47,7 @@ export type ReportItem = {
     email: string;
     reporttype: string;
     reportTo: string;
+    template?:string;
   };
   siteTimes: {
     monthstart: string;

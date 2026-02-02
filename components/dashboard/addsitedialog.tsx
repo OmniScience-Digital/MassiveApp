@@ -192,9 +192,9 @@ const InputModal: React.FC<InputModalProps> = ({
               <SelectValue placeholder="Report To" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="email">Email</SelectItem>
-              <SelectItem value="telegram">Telegram</SelectItem>
-              <SelectItem value="email & telegram">Email & Telegram</SelectItem>
+              <SelectItem value="Email">Email</SelectItem>
+              <SelectItem value="Telegram">Telegram</SelectItem>
+              <SelectItem value="Telegram & Email"> Telegram & Email </SelectItem>
             </SelectContent>
           </Select>
           {/* Conditionally render the Email Input */}

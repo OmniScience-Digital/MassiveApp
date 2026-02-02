@@ -124,7 +124,15 @@ export const FormulaEditor = ({
 
   const handleSave = async () => {
     try {
-      if (!editingFormula) return;
+      if (!editingFormula?.formulaname || !editingFormula.formula) {
+        setIsDialogOpen(false);
+        setFormulas(initialFormulas);
+        setSuccessful(false);
+        setMessage("Missing formula attributes");
+        setShow(true);
+
+        return;
+      }
 
       // Optimistically update local state
       setFormulas((prev) => {
@@ -133,8 +141,8 @@ export const FormulaEditor = ({
         );
         return exists
           ? prev.map((f) =>
-              f.formulaname === editingFormula.formulaname ? editingFormula : f,
-            )
+            f.formulaname === editingFormula.formulaname ? editingFormula : f,
+          )
           : [...prev, editingFormula];
       });
 
@@ -192,9 +200,9 @@ export const FormulaEditor = ({
     setEditingFormula((prev) =>
       prev
         ? {
-            ...prev,
-            formula: `${prev.formula} ${value}`,
-          }
+          ...prev,
+          formula: `${prev.formula} ${value}`,
+        }
         : null,
     );
   };

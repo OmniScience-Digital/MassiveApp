@@ -687,15 +687,16 @@ export default function DashboardPage() {
                                         <Settings className="h-4 w-4" />
                                         <span className="hidden sm:inline">Configuration</span>
                                     </TabsTrigger>
+                                    <TabsTrigger value="scales" className="flex items-center gap-2">
+                                        <Scale className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Scales</span>
+                                    </TabsTrigger>
 
                                     <TabsTrigger value="formulas" className="flex items-center gap-2">
                                         <Calculator className="h-4 w-4" />
                                         <span className="hidden sm:inline">Formulas</span>
                                     </TabsTrigger>
-                                    <TabsTrigger value="scales" className="flex items-center gap-2">
-                                        <Scale className="h-4 w-4" />
-                                        <span className="hidden sm:inline">Scales</span>
-                                    </TabsTrigger>
+
                                     <TabsTrigger value="rpt" className="flex items-center gap-2">
                                         <Ruler className="h-4 w-4" />
                                         <span className="hidden sm:inline">Rand Per Ton</span>
@@ -773,7 +774,22 @@ export default function DashboardPage() {
                                         </Card>
                                     </div>
                                 </TabsContent>
-
+                                {/* Scales Tab */}
+                                <TabsContent value="scales" className="space-y-4 mt-4">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-base">Scale Management</CardTitle>
+                                            <CardDescription>View and manage all scales</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <SharedTable
+                                                title={["Scale", "Iccid", "Mtd Opening"]}
+                                                scales={scales}
+                                                onUpdate={handleScalesUpdate}
+                                            />
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
 
                                 {/* Formulas Tab */}
                                 <TabsContent value="formulas" className="space-y-4 mt-4">
@@ -810,22 +826,7 @@ export default function DashboardPage() {
                                     </Card>
                                 </TabsContent>
 
-                                {/* Scales Tab */}
-                                <TabsContent value="scales" className="space-y-4 mt-4">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle className="text-base">Scale Management</CardTitle>
-                                            <CardDescription>View and manage all scales</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <SharedTable
-                                                title={["Scale", "Iccid", "Mtd Opening"]}
-                                                scales={scales}
-                                                onUpdate={handleScalesUpdate}
-                                            />
-                                        </CardContent>
-                                    </Card>
-                                </TabsContent>
+
                                 {/* RPT */}
                                 <TabsContent value="rpt" className="space-y-4 mt-4">
                                     <Card>

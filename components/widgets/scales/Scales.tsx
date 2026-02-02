@@ -134,8 +134,8 @@ const SharedTable = ({ title, scales, onUpdate }: SharedTableProps) => {
       if (!exists) {
         if (row.scalename && row.iccid) {
           const createScale = await createTelegramScale(id as string, {
-            scalename: row.scalename,
-            iccid: row.iccid,
+            scalename: row.scalename.trim(),
+            iccid: row.iccid.trim(),
             openingScaletons: row.openingScaletons,
           });
 
@@ -167,8 +167,8 @@ const SharedTable = ({ title, scales, onUpdate }: SharedTableProps) => {
 
 
         await updateTelegramScale(id as string, {
-          scalename: row.scalename,
-          iccid: row.iccid,
+          scalename: row.scalename.trim(),
+          iccid: row.iccid.trim(),
           openingScaletons: row.openingScaletons,
         });
 

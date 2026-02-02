@@ -233,7 +233,7 @@
 // if (deleteComponent === -1) {
 //   // Remove this component from the dynamicInputs array
 //   setDynamicInputs(prev => prev.filter(item => item.id !== id));
-  
+
 //   if (inputListCount > 0) {
 //     setInputListCount(prev => prev - 1);
 //   }
@@ -476,7 +476,7 @@ const InputList = ({
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState("");
-  
+
   const [isDataHidden, setIsDataHidden] = useState(false);
   const [hidePending, setHidePending] = useState(false);
   const [checkboxChecked, setCheckboxChecked] = useState(false);
@@ -619,7 +619,7 @@ const InputList = ({
         inputListName: headerName,
         inputs: inputsToSave
       };
-      
+
       let newInput: any;
 
       if (title === "rpt") {
@@ -676,7 +676,7 @@ const InputList = ({
 
       if (deleteComponent === -1) {
         setDynamicInputs(prev => prev.filter(item => item.id !== id));
-        
+
         if (inputListCount > 0) {
           setInputListCount(prev => prev - 1);
         }
@@ -723,7 +723,7 @@ const InputList = ({
             </h2>
           )}
         </div>
-        
+
         <div className="flex items-center">
           <Button variant="ghost" size="icon" onClick={toggleEditHeader}>
             <Edit className="h-4 w-4" />
@@ -732,16 +732,20 @@ const InputList = ({
       </div>
 
       {!isDataHidden && (
-        <div className="flex items-center space-x-2 p-3 bg-yellow-50 rounded border border-yellow-200">
-          <Checkbox 
+        <div className="flex items-center space-x-2 p-3 rounded border
+                bg-yellow-50 border-yellow-200
+                dark:bg-yellow-900 dark:border-yellow-700">
+          <Checkbox
             checked={checkboxChecked}
+            className="bg-background dark:bg-gray-800"
             onCheckedChange={toggleHideData}
             id="hide-data"
             disabled={isDataHidden}
           />
-          <label 
-            htmlFor="hide-data" 
-            className="text-sm font-medium cursor-pointer select-none"
+          <label
+            htmlFor="hide-data"
+            className="text-sm font-medium cursor-pointer select-none text-foreground
+               dark:text-yellow-300"
             onClick={(e) => {
               e.preventDefault();
               if (!isDataHidden) {
@@ -752,11 +756,12 @@ const InputList = ({
             Hide all data permanently
           </label>
           {checkboxChecked && (
-            <span className="text-xs text-yellow-600 ml-2">
+            <span className="text-xs ml-2 text-yellow-600 dark:text-yellow-400">
               (Will be applied when saved)
             </span>
           )}
         </div>
+
       )}
 
       {isDataHidden && (
@@ -888,7 +893,7 @@ const InputList = ({
           </Button>
         )}
       </div>
-      
+
       {show && (
         <ResponseModal
           successful={successful}

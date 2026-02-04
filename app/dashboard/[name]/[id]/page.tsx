@@ -299,7 +299,7 @@ export default function DashboardPage() {
             );
 
             setLoadingBtn(false);
-            setMessage("Data fetched successfully");
+            setMessage("Report generated successfully");
             setShow(true);
             setSuccessful(true);
         } catch (error) {
@@ -384,7 +384,7 @@ export default function DashboardPage() {
             );
 
             setLoadingBtn(false);
-            setMessage("Data fetched  successfully");
+            setMessage("Report generated  successfully");
             setShow(true);
             setSuccessful(true);
         } catch (error) {

@@ -35,7 +35,7 @@ export function SiteControls({ stopTimes }: { stopTimes: StopTimesState }) {
   const handleRunReport = async () => {
     setIsLoading(true);
     try {
-     
+
       const payload = {
         selectedTime: selectedTime as string,
         reportType: reportType as string,
@@ -49,13 +49,20 @@ export function SiteControls({ stopTimes }: { stopTimes: StopTimesState }) {
       });
 
       const result = await res.json();
-      setMessage(result.message || "Reports sent successfully!");
+
+      if (!res.ok) {
+        throw new Error(result.error || "Request failed");
+      }
+
+      setMessage(result.message);
       setShow(true);
-      setSuccessful(res.ok);
+      setSuccessful(true);
 
 
     } catch (error) {
-      setMessage("Error sending CSV: " + error);
+      const errMsg =
+        error instanceof Error ? error.message : "Unknown error from mass-shiftrun";
+      setMessage("Error running report: " + errMsg);
       setShow(true);
       setSuccessful(false);
       console.log(error);

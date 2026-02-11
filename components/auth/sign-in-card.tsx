@@ -70,7 +70,6 @@ export const SignInCard = ({ setState }: SignInCardProps) => {
 
         if (isSignedIn) {
           setIsSuccess(true);
-          await new Promise((resolve) => setTimeout(resolve, 1500));
           await router.push("/landing");
         } else {
           console.log("Sign in requires additional steps:", nextStep);

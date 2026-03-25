@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fire and forget (no await)
-    fetch(`${constants.securebaseUrltest}/csvparserUpload`, {
+    fetch(`${constants.securebaseUrlprod}/csvparserUpload`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ batchId }),

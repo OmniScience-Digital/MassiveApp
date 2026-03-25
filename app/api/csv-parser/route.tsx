@@ -48,7 +48,7 @@ async function processSingleChunk(chunkData: any) {
   };
 
   const response = await fetch(
-    `${constants.securebaseUrltest}/csvparser`,
+    `${constants.securebaseUrlprod}/csvparser`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

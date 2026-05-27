@@ -38,39 +38,35 @@ export function DataTable<TData extends object>({
   searchColumn = "sitename",
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
-  );
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [isMounted, setIsMounted] = React.useState(false);
 
-  const [pagination, setPagination] = React.useState({
-    pageIndex: 0,
-    pageSize: pageSize,
+  const [pagination, setPagination] = React.useState(() => {
+    // Initialise from localStorage synchronously on first render (client only)
+    if (typeof window !== "undefined" && storageKey) {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return { pageIndex: parsed.pageIndex || 0, pageSize };
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return { pageIndex: 0, pageSize };
   });
 
   React.useEffect(() => {
     setIsMounted(true);
-    if (storageKey && typeof window !== "undefined") {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setPagination({
-            pageIndex: parsed.pageIndex || 0,
-            pageSize: pageSize,
-          });
-        } catch (e) {
-          console.error("Failed to parse saved pagination", e);
-        }
-      }
-    }
-  }, [storageKey, pageSize]);
+  }, []);
 
+  // Persist page index whenever it changes (but not pageSize — that's controlled by prop)
   React.useEffect(() => {
     if (isMounted && storageKey) {
-      localStorage.setItem(storageKey, JSON.stringify(pagination));
+      localStorage.setItem(storageKey, JSON.stringify({ pageIndex: pagination.pageIndex }));
     }
-  }, [pagination, storageKey, isMounted]);
+  }, [pagination.pageIndex, storageKey, isMounted]);
 
   const memoData = React.useMemo(() => data, [data]);
   const memoColumns = React.useMemo(() => columns, [columns]);
@@ -85,78 +81,63 @@ export function DataTable<TData extends object>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
-    state: {
-      sorting,
-      columnFilters,
-      pagination,
-    },
+    state: { sorting, columnFilters, pagination },
     autoResetPageIndex: false,
   });
 
+  // Reset to page 0 only when the search filter value actually changes
+  const prevFilterRef = React.useRef<ColumnFiltersState>([]);
   React.useEffect(() => {
-    if (isMounted) {
+    if (!isMounted) return;
+    const prev = JSON.stringify(prevFilterRef.current);
+    const next = JSON.stringify(columnFilters);
+    if (prev !== next) {
       table.setPageIndex(0);
+      prevFilterRef.current = columnFilters;
     }
-  }, [columnFilters, table, isMounted]);
+  }, [columnFilters, isMounted]); // intentionally omit table
 
   const searchValue =
     (table.getColumn(searchColumn)?.getFilterValue() as string) ?? "";
 
-  if (!isMounted) {
-    return (
-      <div className="bg-background text-foreground p-4 rounded-lg shadow-md">
-        <h2 className="text-xl font-bold mb-4">{title}</h2>
-        <div className="flex items-center py-4">
-          <Input
-            placeholder={`Search ${searchColumn}`}
-            className="max-w-sm"
-            value=""
-            onChange={() => {}}
-          />
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {typeof header.column.columnDef.header === "function"
-                        ? header.column.columnDef.header(header.getContext())
-                        : header.column.columnDef.header}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  Loading...
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-        <div className="flex items-center justify-between px-2 py-4">
-          <div className="text-sm text-muted-foreground">
-            Page 1 of {Math.ceil(data.length / pageSize)}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" disabled>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled>
-              Next
-            </Button>
-          </div>
-        </div>
+  const skeleton = (
+    <div className="bg-background text-foreground p-4 rounded-lg shadow-md">
+      <h2 className="text-xl font-bold mb-4">{title}</h2>
+      <div className="flex items-center py-4">
+        <Input placeholder={`Search ${searchColumn}`} className="max-w-sm" value="" onChange={() => {}} />
       </div>
-    );
-  }
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((hg) => (
+              <TableRow key={hg.id}>
+                {hg.headers.map((h) => (
+                  <TableHead key={h.id}>
+                    {typeof h.column.columnDef.header === "function"
+                      ? h.column.columnDef.header(h.getContext())
+                      : h.column.columnDef.header}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {[...Array(3)].map((_, i) => (
+              <TableRow key={i}>
+                {columns.map((_, j) => (
+                  <TableCell key={j}>
+                    <div className="h-4 bg-muted rounded animate-pulse" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+
+  if (!isMounted) return skeleton;
 
   return (
     <div className="bg-background text-foreground p-4 rounded-lg shadow-md">
@@ -177,13 +158,13 @@ export function DataTable<TData extends object>({
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {typeof header.column.columnDef.header === "function"
-                      ? header.column.columnDef.header(header.getContext())
-                      : header.column.columnDef.header}
+            {table.getHeaderGroups().map((hg) => (
+              <TableRow key={hg.id}>
+                {hg.headers.map((h) => (
+                  <TableHead key={h.id}>
+                    {typeof h.column.columnDef.header === "function"
+                      ? h.column.columnDef.header(h.getContext())
+                      : h.column.columnDef.header}
                   </TableHead>
                 ))}
               </TableRow>
@@ -204,11 +185,11 @@ export function DataTable<TData extends object>({
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <span className="text-3xl">🏗️</span>
+                    <span>No sites yet — add your first one above.</span>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -218,8 +199,7 @@ export function DataTable<TData extends object>({
 
       <div className="flex items-center justify-between px-2 py-4">
         <div className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
+          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
         </div>
         <div className="flex items-center space-x-2">
           <Button

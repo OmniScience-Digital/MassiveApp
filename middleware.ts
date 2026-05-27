@@ -11,22 +11,24 @@ const protectedRoutes = [
   "/stockpileDashboard",
   "/telegramreporting",
   "/stockpilereporting",
+  "/progressivereporting",
+  "/sitesimulator",
 ];
-const publicRoutes = ["/"];
 
 export default async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    path.startsWith(route),
-  );
-  const isPublicRoute = publicRoutes.includes(path);
 
+  const isProtectedRoute = protectedRoutes.some((r) => path.startsWith(r));
+  const isPublicRoute = path === "/";
+
+  if (!isProtectedRoute && !isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  const response = NextResponse.next();
   let authenticated = false;
 
   try {
-    // Use the response object as required by Amplify
-    const response = NextResponse.next();
-    
     authenticated = await runWithAmplifyServerContext({
       nextServerContext: { request, response },
       operation: async (context) => {
@@ -42,19 +44,17 @@ export default async function middleware(request: NextRequest) {
     authenticated = false;
   }
 
-  // Redirect unauthenticated users away from protected routes
   if (isProtectedRoute && !authenticated) {
     return NextResponse.redirect(new URL("/", request.nextUrl));
   }
 
-  // Redirect authenticated users away from public routes
-  if (isPublicRoute && authenticated && !path.startsWith("/landing")) {
+  if (isPublicRoute && authenticated) {
     return NextResponse.redirect(new URL("/landing", request.nextUrl));
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|.*\\.png$).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|.*\\.png$|.*\\.ico$|.*\\.svg$|.*\\.jpg$|.*\\.webp$).*)"],
 };

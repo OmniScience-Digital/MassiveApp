@@ -98,6 +98,10 @@ export type ReportItem = {
       isEditing: boolean;
     }[];
   }[];
+  virtualformulas?: {
+    formulaname: string;
+    formula: string;
+  }[];
   rpt_tables?: {
     id: number;
     tableName: string;

@@ -31,6 +31,10 @@ import ResponseModal from "@/components/widgets/response";
 import { deleteFormula } from "@/service/formulas.Service";
 
 import { runStockpileReport } from "@/app/api/stockpile.route";
+import { SiteHeaderCard } from "@/components/dashboard/SiteHeaderCard";
+import { SiteCompletenessPanel } from "@/components/dashboard/SiteCompletenessPanel";
+import { SaveIndicator } from "@/components/widgets/SaveIndicator";
+import { useSaveFeedback } from "@/hooks/useSaveFeedback";
 import { Switch } from "@/components/ui/switch";
 import Timewidget from "@/components/widgets/Date/sitetime";
 import { DynamicInputItem, InputData } from "@/types/dynamic-inputs";
@@ -67,6 +71,8 @@ export default function DashboardPage() {
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState("");
+  const statusSave = useSaveFeedback();
+  const [activeTab, setActiveTab] = useState("schedules");
 
   const initialInputs: InputData[] = [];
 
@@ -243,7 +249,7 @@ export default function DashboardPage() {
 
   const handleToggleChange = async (newValue: string) => {
     setSelectedValue(newValue);
-    await updateSiteStatusById(id, newValue);
+    await statusSave.wrap(() => updateSiteStatusById(id, newValue));
   };
 
   const handleSelectedScales = (selectedScales: string[]) => {
@@ -418,6 +424,8 @@ export default function DashboardPage() {
         <main className="flex-1 mt-20">
           {sitedata && (
             <>
+              <SiteHeaderCard site={sitedata} siteName={siteName} reportType={dashboardname} />
+              <SiteCompletenessPanel site={sitedata} onTabChange={(tab) => setActiveTab(tab)} />
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2 p-2 bg-background text-foreground">
                 <div className="p-4 shadow-md shadow-gray-200 border rounded-md flex items-center justify-between bg-background text-foreground">
                   <span className="bg-background text-foreground text-lg">
@@ -502,7 +510,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex flex-col py-3 px-2">
-                <Tabs defaultValue="iot" className="w-[100%]">
+                <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="iot" className="w-[100%]">
                   <TabsList>
                     <TabsTrigger value="iot">IOT</TabsTrigger>
                     <TabsTrigger value="iotnplc">IOT & PLC</TabsTrigger>

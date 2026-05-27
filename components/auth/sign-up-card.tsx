@@ -124,13 +124,12 @@ export const SignUpCard = ({ setState }: SignUpCardProps) => {
 
   return (
     <Card className="w-full h-full px-8 py-6">
-      <div className="flex items-center w-full justify-center">
-        <Image
+       <div className="flex items-center w-full justify-center">
+        <img
           src="/assets/logo.png"
           alt="Logo"
-          width={120}
-          height={80}
-          className="h-10 mr-2"
+          loading="lazy"
+            className="h-12 mr-2"
         />
       </div>
       <CardHeader className="px-0 pt-3 my-5">

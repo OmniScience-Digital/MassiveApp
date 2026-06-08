@@ -122,6 +122,7 @@ export default function DashboardPage() {
       const { data: site, errors } = await client.models.Sites.get({
         id: id,
       });
+      
 
       if (errors) {
         console.error("Error fetching site:", errors);
@@ -836,7 +837,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                       <SharedTable
-                        title={["Scale", "Iccid", "Mtd Opening"]}
+                        title={["Scale Name", "ICCID", "Device Address", "Totalizer", "Flow", "Opening MTD"]}
                         scales={scales}
                         onUpdate={handleScalesUpdate}
                       />

@@ -575,7 +575,7 @@ export default function DashboardPage() {
                     </div>
 
                     <SharedTable
-                      title={["Scale", "Iccid", "Mtd Opening"]}
+                      title={["Scale Name", "ICCID", "Device Address", "Totalizer", "Flow", "Opening MTD"]}
                       scales={scales}
                       onUpdate={handleScalesUpdate}
                     />

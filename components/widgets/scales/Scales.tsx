@@ -23,68 +23,102 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import ResponseModal from "../response";
-import {
-  createTelegramScale,
-  updateTelegramScale,
-  deleteTelegramScale,
-} from "@/service/scales.Service";
+import { saveAllScales, deleteTelegramScale } from "@/service/scales.Service";
 import { ReportItem } from "@/types/schema";
 
 interface ScaleRow {
   id?: string;
   scalename: string;
   iccid: string;
+  deviceAddress: string;
+  totalizer: string;
+  monthTons: string;
+  flow: string;
   openingScaletons: string;
-  [key: string]: string | undefined;
 }
 
 interface SharedTableProps {
   title: string[];
   scales: ScaleRow[];
-  onUpdate?: (primaryScales: ReportItem["scales"]) => void;
+  onUpdate?: (scales: ReportItem["scales"]) => void;
 }
 
-const SharedTable = ({ title, scales, onUpdate }: SharedTableProps) => {
+const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
   const { id } = useParams<{ id: string }>();
 
   const [rows, setRows] = useState<ScaleRow[]>(scales);
+  const [dirtyRows, setDirtyRows] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [rowToDelete, setRowToDelete] = useState<ScaleRow | null>(null);
   const [indexToDelete, setIndexToDelete] = useState<number | null>(null);
-
-  const [loadingRows, setLoadingRows] = useState<{ [key: number]: boolean }>(
-    {},
-  );
-
   const [show, setShow] = useState(false);
   const [successful, setSuccessful] = useState(false);
   const [message, setMessage] = useState("");
 
-  const initialRowState: ScaleRow = {
+  const blankRow = (): ScaleRow => ({
+    id: Date.now().toString(),
     scalename: "",
     iccid: "",
+    deviceAddress: "",
+    totalizer: "",
+    monthTons: "",
+    flow: "",
     openingScaletons: "",
-    ...Object.fromEntries(title.map((columnName) => [columnName, ""])),
-  };
+  });
 
   const handleChange =
-    (idx: number, columnName: string) =>
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { value } = e.target;
-        const updatedRows = [...rows];
-        updatedRows[idx] = {
-          ...updatedRows[idx],
-          [columnName]: value,
+    (idx: number, field: keyof ScaleRow) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setRows((prev) => {
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], [field]: e.target.value };
+        return updated;
+      });
+      setDirtyRows((prev) => new Set(prev).add(idx));
+    };
+
+  const handleDeviceAddressChange =
+    (idx: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setRows((prev) => {
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          deviceAddress: `modbus-${e.target.value}`,
         };
-        setRows(updatedRows);
-      };
+        return updated;
+      });
+      setDirtyRows((prev) => new Set(prev).add(idx));
+    };
 
   const handleAddRow = () => {
-    const newItem: ScaleRow = {
-      ...initialRowState,
-      id: new Date().getTime().toString(),
-    };
-    setRows([...rows, newItem]);
+    const newRow = blankRow();
+    setRows((prev) => [...prev, newRow]);
+    setDirtyRows((prev) => new Set(prev).add(rows.length));
+  };
+
+  const handleSaveAll = async () => {
+    setSaving(true);
+    try {
+      // Strip UI-only `id` field before persisting
+      const payload = rows.map(({ id: _id, ...rest }) => rest);
+      const result = await saveAllScales(id as string, payload);
+      if (result) {
+        setDirtyRows(new Set());
+        onUpdate?.(payload);
+        setSuccessful(true);
+        setMessage("All scales saved successfully");
+      } else {
+        setSuccessful(false);
+        setMessage("Failed to save scales");
+      }
+    } catch {
+      setSuccessful(false);
+      setMessage("Unexpected error saving scales");
+    } finally {
+      setSaving(false);
+      setShow(true);
+    }
   };
 
   const handleRemoveSpecificRow = (row: ScaleRow, idx: number) => {
@@ -93,140 +127,104 @@ const SharedTable = ({ title, scales, onUpdate }: SharedTableProps) => {
     setConfirmDialogOpen(true);
   };
 
-
   const confirmDelete = async () => {
     if (indexToDelete === null || !rowToDelete) return;
 
-    const updatedRows = [...rows];
-    updatedRows.splice(indexToDelete, 1);
+    const updatedRows = rows.filter((_, i) => i !== indexToDelete);
     setRows(updatedRows);
-
+    setDirtyRows((prev) => {
+      const next = new Set<number>();
+      prev.forEach((i) => { if (i < indexToDelete) next.add(i); else if (i > indexToDelete) next.add(i - 1); });
+      return next;
+    });
 
     try {
       await deleteTelegramScale(id as string, rowToDelete);
-      setShow(true);
+      onUpdate?.(updatedRows.map(({ id: _id, ...rest }) => rest));
       setSuccessful(true);
       setMessage("Scale deleted successfully");
-
-
-      if (onUpdate) {
-        onUpdate(updatedRows);
-      }
-
-    } catch (error) {
-      setShow(true);
+    } catch {
       setSuccessful(false);
       setMessage("Failed to delete scale");
     } finally {
+      setShow(true);
       setConfirmDialogOpen(false);
       setRowToDelete(null);
       setIndexToDelete(null);
     }
   };
 
-  const handleSaveRow = async (row: ScaleRow, rowIndex: number) => {
-    setLoadingRows((prev) => ({ ...prev, [rowIndex]: true }));
-
-    const exists = scales.some((scale) => scale.scalename === row.scalename);
-
-
-    try {
-      if (!exists) {
-        if (row.scalename && row.iccid) {
-          const createScale = await createTelegramScale(id as string, {
-            scalename: row.scalename.trim(),
-            iccid: row.iccid.trim(),
-            openingScaletons: row.openingScaletons,
-          });
-
-          if (createScale) {
-            // Update local state after successful save
-            const updatedRows = [...rows];
-            updatedRows[rowIndex] = row;
-            setRows(updatedRows);
-
-            if (onUpdate) {
-              onUpdate(updatedRows);
-            }
-
-            setShow(true);
-            setSuccessful(true);
-            setMessage("Scale created successfully");
-
-          } else {
-            setSuccessful(false);
-            setMessage("Failed to create scale");
-            setShow(true);
-          }
-        }
-      } else {
-        // Update local state immediately
-        const updatedRows = [...rows];
-        updatedRows[rowIndex] = row;
-        setRows(updatedRows);
-
-
-        await updateTelegramScale(id as string, {
-          scalename: row.scalename.trim(),
-          iccid: row.iccid.trim(),
-          openingScaletons: row.openingScaletons,
-        });
-
-
-        setShow(true);
-        setSuccessful(true);
-        setMessage("Scale updated successfully");
-
-        if (onUpdate) {
-          onUpdate(updatedRows);
-        }
-
-      }
-    } catch (error) {
-      setShow(true);
-      setSuccessful(false);
-      setMessage("Failed to save scale");
-    } finally {
-      setLoadingRows((prev) => ({ ...prev, [rowIndex]: false }));
-    }
-  };
-
   return (
     <div className="p-2 relative">
       {show && (
-        <ResponseModal
-          successful={successful}
-          message={message}
-          setShow={setShow}
-        />
+        <ResponseModal successful={successful} message={message} setShow={setShow} />
       )}
 
-      <Button onClick={handleAddRow} className="float-right m-2">
-        <Plus className="mr-2 h-4 w-4" />
-        Add Scales
-      </Button>
+      {/* Action bar */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          {dirtyRows.size > 0 && (
+            <span className="text-xs text-amber-500">
+              {dirtyRows.size} unsaved change{dirtyRows.size > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleAddRow}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Scale
+          </Button>
+          <Button onClick={handleSaveAll} disabled={saving || dirtyRows.size === 0}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save All
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
 
-      <div className="border rounded-md">
+      <div className="border rounded-md overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>#</TableHead>
-              {title.map((columnName, index) => (
-                <TableHead key={index}>{columnName}</TableHead>
-              ))}
-              <TableHead>Delete</TableHead>
-              <TableHead>Update</TableHead>
+              <TableHead className="w-8">#</TableHead>
+              <TableHead>Scale Name</TableHead>
+              <TableHead>ICCID</TableHead>
+              <TableHead>Device Address</TableHead>
+              <TableHead>Totalizer</TableHead>
+              <TableHead>Month Tons</TableHead>
+              <TableHead>Flow</TableHead>
+              <TableHead>Opening MTD</TableHead>
+              <TableHead className="w-24">Delete</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-6">
+                  No scales yet — click <strong>Add Scale</strong> to get started.
+                </TableCell>
+              </TableRow>
+            )}
             {rows.map((row, index) => (
-              <TableRow key={row.id || index}>
-                <TableCell>{index + 1}</TableCell>
+              <TableRow
+                key={row.id || index}
+                className={dirtyRows.has(index) ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+              >
+                <TableCell className="text-muted-foreground text-sm">{index + 1}</TableCell>
                 <TableCell>
                   <Input
                     type="text"
                     value={row.scalename}
                     onChange={handleChange(index, "scalename")}
+                    placeholder="Scale name"
                   />
                 </TableCell>
                 <TableCell>
@@ -234,43 +232,68 @@ const SharedTable = ({ title, scales, onUpdate }: SharedTableProps) => {
                     type="text"
                     value={row.iccid}
                     onChange={handleChange(index, "iccid")}
+                    placeholder="ICCID"
                   />
                 </TableCell>
-
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground select-none whitespace-nowrap">
+                      modbus-
+                    </span>
+                    <Input
+                      type="text"
+                      value={row.deviceAddress?.replace(/^modbus-/, "") ?? ""}
+                      onChange={handleDeviceAddressChange(index)}
+                      className="w-24"
+                      placeholder="address"
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="text"
+                    value={row.totalizer ?? ""}
+                    onChange={handleChange(index, "totalizer")}
+                    className="w-28"
+                    placeholder="Totalizer"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="text"
+                    value={row.monthTons ?? ""}
+                    onChange={handleChange(index, "monthTons")}
+                    className="w-28"
+                    placeholder="Month tons"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="text"
+                    value={row.flow ?? ""}
+                    onChange={handleChange(index, "flow")}
+                    className="w-24"
+                    placeholder="Flow"
+                  />
+                </TableCell>
                 <TableCell>
                   <Input
                     type="text"
                     value={row.openingScaletons}
                     onChange={handleChange(index, "openingScaletons")}
+                    className="w-28"
+                    placeholder="Opening MTD"
                   />
                 </TableCell>
-
                 <TableCell>
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => handleRemoveSpecificRow(row, index)}
-                    className="text-red-500"
+                    className="text-red-500 hover:text-red-600"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remove
+                    <Trash2 className="h-4 w-4" />
                   </Button>
-                </TableCell>
-                <TableCell>
-                  {loadingRows[index] ? (
-                    <Button disabled>
-                      <Loader2 className="animate-spin" />
-                      Please wait
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleSaveRow(row, index)}
-                      className="text-green-500"
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </Button>
-                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -283,8 +306,8 @@ const SharedTable = ({ title, scales, onUpdate }: SharedTableProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this row? Make Sure scale is not
-              selected as a primary scale !!
+              Are you sure you want to delete this scale? Make sure it is not
+              selected as a primary scale.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

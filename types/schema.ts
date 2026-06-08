@@ -62,6 +62,10 @@ export type ReportItem = {
   scales: {
     scalename: string;
     iccid: string;
+    deviceAddress: string;
+    totalizer: string;
+    monthTons: string;
+    flow: string;
     openingScaletons: string;
   }[];
   headers: {
@@ -122,3 +126,13 @@ export interface StopTimesState {
   nightStop: string[];
   extraStop: string[];
 }
+
+export type ScalePayload = {
+  scalename: string;
+  iccid: string;
+  deviceAddress: string;
+  totalizer: string;
+  monthTons: string;
+  flow: string;
+  openingScaletons: string;
+};

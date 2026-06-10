@@ -34,9 +34,15 @@ export default function Navbar() {
     const fetchUser = async () => {
       try {
         const { tokens } = await fetchAuthSession();
-        setUser(tokens?.signInDetails?.loginId || "");
+        const email = tokens?.signInDetails?.loginId || "";
+        if (!email) {
+          router.replace("/");
+          return;
+        }
+        setUser(email);
       } catch {
-        // not logged in or offline — silently ignore
+        // No valid session — redirect to login
+        router.replace("/");
       }
     };
     // Use requestIdleCallback if available, else setTimeout
@@ -57,11 +63,14 @@ export default function Navbar() {
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await signOut();
-      router.push("/");
-      setUser("");
+      await signOut({ global: true });
     } catch (error) {
-      console.error("Sign out error:", error);
+      // global signOut can fail if the refresh token is already expired — fall through
+      console.warn("Sign out error:", error);
+    } finally {
+      setUser("");
+      // Replace history so the user can't navigate back to a protected page
+      router.replace("/");
       setIsSigningOut(false);
     }
   };

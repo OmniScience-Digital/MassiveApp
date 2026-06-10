@@ -67,6 +67,7 @@ export type ReportItem = {
     monthTons: string;
     flow: string;
     openingScaletons: string;
+     isPlc?: boolean;
   }[];
   headers: {
     headername: string;
@@ -127,6 +128,7 @@ export interface StopTimesState {
   extraStop: string[];
 }
 
+
 export type ScalePayload = {
   scalename: string;
   iccid: string;
@@ -135,4 +137,5 @@ export type ScalePayload = {
   monthTons: string;
   flow: string;
   openingScaletons: string;
+  isPlc?: boolean;
 };

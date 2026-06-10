@@ -35,6 +35,7 @@ interface ScaleRow {
   monthTons: string;
   flow: string;
   openingScaletons: string;
+  isPlc?: boolean;
 }
 
 interface SharedTableProps {
@@ -65,6 +66,7 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
     monthTons: "",
     flow: "",
     openingScaletons: "",
+    isPlc: false,
   });
 
   const handleChange =
@@ -91,6 +93,15 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
       setDirtyRows((prev) => new Set(prev).add(idx));
     };
 
+  const handlePlcToggle = (idx: number) => {
+    setRows((prev) => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], isPlc: !updated[idx].isPlc };
+      return updated;
+    });
+    setDirtyRows((prev) => new Set(prev).add(idx));
+  };
+
   const handleAddRow = () => {
     const newRow = blankRow();
     setRows((prev) => [...prev, newRow]);
@@ -100,7 +111,6 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
   const handleSaveAll = async () => {
     setSaving(true);
     try {
-      // Strip UI-only `id` field before persisting
       const payload = rows.map(({ id: _id, ...rest }) => rest);
       const result = await saveAllScales(id as string, payload);
       if (result) {
@@ -134,7 +144,10 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
     setRows(updatedRows);
     setDirtyRows((prev) => {
       const next = new Set<number>();
-      prev.forEach((i) => { if (i < indexToDelete) next.add(i); else if (i > indexToDelete) next.add(i - 1); });
+      prev.forEach((i) => {
+        if (i < indexToDelete) next.add(i);
+        else if (i > indexToDelete) next.add(i - 1);
+      });
       return next;
     });
 
@@ -157,7 +170,11 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
   return (
     <div className="p-2 relative">
       {show && (
-        <ResponseModal successful={successful} message={message} setShow={setShow} />
+        <ResponseModal
+          successful={successful}
+          message={message}
+          setShow={setShow}
+        />
       )}
 
       {/* Action bar */}
@@ -174,7 +191,23 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
             <Plus className="mr-2 h-4 w-4" />
             Add Scale
           </Button>
-          <Button onClick={handleSaveAll} disabled={saving || dirtyRows.size === 0}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const allPlc = rows.every((r) => r.isPlc);
+              setRows((prev) => prev.map((r) => ({ ...r, isPlc: !allPlc })));
+              setDirtyRows(new Set(rows.map((_, i) => i)));
+            }}
+            disabled={rows.length === 0}
+          >
+            {rows.every((r) => r.isPlc) && rows.length > 0
+              ? "Unmark All PLC"
+              : "Mark All PLC"}
+          </Button>
+          <Button
+            onClick={handleSaveAll}
+            disabled={saving || dirtyRows.size === 0}
+          >
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -202,23 +235,32 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
               <TableHead>Month Tons</TableHead>
               <TableHead>Flow</TableHead>
               <TableHead>Opening MTD</TableHead>
+              <TableHead className="w-20 text-center">PLC</TableHead>
               <TableHead className="w-24">Delete</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-6">
-                  No scales yet — click <strong>Add Scale</strong> to get started.
+                <TableCell
+                  colSpan={10}
+                  className="text-center text-sm text-muted-foreground py-6"
+                >
+                  No scales yet — click <strong>Add Scale</strong> to get
+                  started.
                 </TableCell>
               </TableRow>
             )}
             {rows.map((row, index) => (
               <TableRow
                 key={row.id || index}
-                className={dirtyRows.has(index) ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+                className={
+                  dirtyRows.has(index) ? "bg-amber-50 dark:bg-amber-950/20" : ""
+                }
               >
-                <TableCell className="text-muted-foreground text-sm">{index + 1}</TableCell>
+                <TableCell className="text-muted-foreground text-sm">
+                  {index + 1}
+                </TableCell>
                 <TableCell>
                   <Input
                     type="text"
@@ -284,6 +326,34 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
                     className="w-28"
                     placeholder="Opening MTD"
                   />
+                </TableCell>
+                <TableCell className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => handlePlcToggle(index)}
+                    title={row.isPlc ? "PLC scale" : "Mark as PLC"}
+                    className={`inline-flex items-center justify-center w-4 h-4 rounded border transition-colors ${
+                      row.isPlc
+                        ? "border-blue-500 bg-blue-500"
+                        : "border-gray-300 dark:border-gray-600 hover:border-blue-400"
+                    }`}
+                  >
+                    {row.isPlc && (
+                      <svg
+                        className="h-2.5 w-2.5 text-white"
+                        fill="none"
+                        viewBox="0 0 10 10"
+                      >
+                        <path
+                          d="M1.5 5l2.5 2.5 5-5"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </button>
                 </TableCell>
                 <TableCell>
                   <Button

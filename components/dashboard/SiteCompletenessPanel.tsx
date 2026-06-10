@@ -10,13 +10,25 @@ const asNum = (v: any) => {
   return isNaN(n) ? 0 : n;
 };
 
-const hasDatasourcekeys = (site: ReportItem) =>
-  (site.dynamic_inputs || []).some(
-    (d) => d.inputListName?.toLowerCase().replace(/\s/g, "") === "datasourcekeys"
-  );
-
 const hasRptConfig = (site: ReportItem) =>
   (site.rpt_inputs || []).length > 0 || (site.rpt_tables || []).length > 0;
+
+// A time is invalid if it's empty or falls in the 23-hour (23:00–23:59)
+const isValidShiftTime = (t: string | undefined) =>
+  !!t && t.trim() !== "" && !t.startsWith("23:");
+
+const hasSiteTimes = (site: ReportItem) => {
+  const st = site.siteTimes;
+  if (!st) return false;
+  // 24-hour shift sites only need monthstart
+  if (st.twentyFourhourShift) return isValidShiftTime(st.monthstart);
+  return (
+    isValidShiftTime(st.dayStart) &&
+    isValidShiftTime(st.dayStop) &&
+    isValidShiftTime(st.nightStart) &&
+    isValidShiftTime(st.nightStop)
+  );
+};
 
 // ─── checklist definition ──────────────────────────────────────────────────
 export type CheckItem = {
@@ -57,12 +69,12 @@ export function buildChecklist(site: ReportItem): CheckItem[] {
       tab: "scales",
     },
     {
-      key: "datasourcekeys",
-      label: "Datasource Keys",
-      description: "Datasourcekeys input list required for data queries",
+      key: "siteTimes",
+      label: "Shift Times",
+      description: "Day/night start & stop times must be set and not in the 23:xx hour",
       critical: true,
-      ok: hasDatasourcekeys(site),
-      tab: "custom",
+      ok: hasSiteTimes(site),
+      tab: "schedules",
     },
     {
       key: "runningTph",
@@ -106,16 +118,6 @@ export function buildChecklist(site: ReportItem): CheckItem[] {
     },
     // ── Important — affect specific report types ──
     {
-      key: "siteTimes",
-      label: "Shift times",
-      description: "At least one shift (day or night) must be configured",
-      critical: false,
-      ok:
-        site.siteTimes?.dayStop !== "23:59" ||
-        site.siteTimes?.nightStop !== "23:59",
-      tab: "schedules",
-    },
-    {
       key: "reportTo",
       label: "Report To",
       description: "Telegram / Email destination",
@@ -148,15 +150,7 @@ export function buildChecklist(site: ReportItem): CheckItem[] {
       critical: false,
       ok: hasRptConfig(site),
       tab: "rpt",
-    },
-    {
-      key: "dynamicInputs",
-      label: "Dynamic inputs",
-      description: "PLC Configs, Hourly Configs etc.",
-      critical: false,
-      ok: (site.dynamic_inputs || []).length > 0,
-      tab: "custom",
-    },
+    }
   ];
 }
 

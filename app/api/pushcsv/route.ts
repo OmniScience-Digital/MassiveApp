@@ -5,13 +5,19 @@ export async function POST(request: NextRequest) {
   try {
     const { batchId } = await request.json();
     if (!batchId) {
-      return NextResponse.json({ error: "batchId is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "batchId is required" },
+        { status: 400 },
+      );
     }
 
     // Fire and forget (no await)
     fetch(`${constants.securebaseUrlprod}/csvparserUpload`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.NEXT_PUBLIC_API_SECRET_KEY ?? "",
+      },
       body: JSON.stringify({ batchId }),
     }).catch((err) => console.error("Trigger failed:", err));
 
@@ -24,7 +30,7 @@ export async function POST(request: NextRequest) {
     console.error("Error in progress POST:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

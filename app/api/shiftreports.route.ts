@@ -1,6 +1,5 @@
 import * as constants from "@/app/constants";
 import { ReportItem } from "@/types/schema";
-//securebaseUrlprod
 
 export const runShiftReport = async (sitedata: ReportItem, shift: string) => {
   try {
@@ -10,6 +9,7 @@ export const runShiftReport = async (sitedata: ReportItem, shift: string) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET_KEY ?? "", 
         },
         body: JSON.stringify({
           sitedata: sitedata,
@@ -22,9 +22,7 @@ export const runShiftReport = async (sitedata: ReportItem, shift: string) => {
       throw new Error(`Request failed with status: ${response.status}`);
     }
 
-    const data = await response.json();
-
-    return data;
+    return await response.json();
   } catch (error) {
     console.error("Error:", error);
     throw error;
@@ -36,13 +34,13 @@ export const runtelegramReportwithDate = async (
   params: { startTime: string; endTime: string; shift: string },
 ) => {
   try {
-
     const response = await fetch(
       `${constants.securebaseUrlprod}/runtelegramReportwithDate`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET_KEY ?? "", 
         },
         body: JSON.stringify({
           sitedata: sitedata,
@@ -55,11 +53,9 @@ export const runtelegramReportwithDate = async (
       throw new Error(`Request failed with status: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     console.error("Error:", error);
     throw error;
   }
 };
-

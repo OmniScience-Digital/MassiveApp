@@ -20,6 +20,7 @@ export const runauditDateReport = async (
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET_KEY ?? "", 
         },
         body: JSON.stringify({
           siteid: siteid,

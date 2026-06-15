@@ -12,7 +12,9 @@ export async function POST() {
       `${constants.securebaseUrltest}/stopsimulator`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET_KEY ?? "",  },
         cache: "no-store", 
       },
     );

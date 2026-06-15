@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET_KEY ?? "", 
         },
         body: JSON.stringify({
           stoptime: body.selectedTime,

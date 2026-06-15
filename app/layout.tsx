@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import ConfigureAmplify from "@/utils/configureAmplify";
 import OAuthListener from "@/components/auth/oauth-listener";
-import { Inter, Oswald } from "next/font/google";
+import { Oswald } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
 const oswald = Oswald({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -21,8 +20,8 @@ export default function RootLayout({
     <html lang="en" className={oswald.className}>
       <body className={oswald.className}>
         <ConfigureAmplify />
-           
-        {children}
+        <OAuthListener />
+        {children}   
       </body>
     </html>
   );

@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { client } from "@/service/schemaClient";
-import { Loader2, PlayIcon } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Navbar from "@/components/layout/navbar";
 import DynamicTable from "@/components/widgets/tables/dynamictable";
 import InputList from "@/components/widgets/InputList";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,6 @@ import Loading from "@/components/widgets/loading";
 import SiteConstants from "@/components/widgets/siteconstants/siteConstants";
 import DynamicinputList from "@/components/widgets/headers/dynamicinputList";
 import SharedTable from "@/components/widgets/scales/Scales";
-import Footer from "@/components/layout/footer";
 import { FormulaEditor } from "@/components/widgets/tables/formulaEditor";
 import { PrimaryScalesSelector } from "@/components/widgets/PrimaryScalesSelector";
 import ResponseModal from "@/components/widgets/response";
@@ -33,7 +31,6 @@ import { deleteFormula } from "@/service/formulas.Service";
 import { runStockpileReport } from "@/app/api/stockpile.route";
 import { SiteHeaderCard } from "@/components/dashboard/SiteHeaderCard";
 import { SiteCompletenessPanel } from "@/components/dashboard/SiteCompletenessPanel";
-import { SaveIndicator } from "@/components/widgets/SaveIndicator";
 import { useSaveFeedback } from "@/hooks/useSaveFeedback";
 import { Switch } from "@/components/ui/switch";
 import Timewidget from "@/components/widgets/Date/sitetime";
@@ -53,13 +50,14 @@ export default function DashboardPage() {
   const [primaryScales, setPrimaryScales] = useState<string[]>([]);
   const [formulas, setFormulas] = useState<ReportItem["formulas"]>([]);
 
-
   const [loadinbtn, setLoadingBtn] = useState(false);
   const [tableCount, setTableCount] = useState(0);
   const [dbtableCount, setDbTableCount] = useState(0);
   const [inputListCount, setInputListCount] = useState(0);
   const [dynamicInputs, setDynamicInputs] = useState<DynamicInputItem[]>([]);
-  const [dynamictables, setDynamictables] = useState<ReportItem["dynamic_tables"]>([]);
+  const [dynamictables, setDynamictables] = useState<
+    ReportItem["dynamic_tables"]
+  >([]);
   const [selectedValue, setSelectedValue] = useState("");
   const [showStockpile, setShowStockpile] = useState(false);
   const [stockpileNumber, setStockpileNumber] = useState("");
@@ -252,10 +250,6 @@ export default function DashboardPage() {
     await statusSave.wrap(() => updateSiteStatusById(id, newValue));
   };
 
-  const handleSelectedScales = (selectedScales: string[]) => {
-    console.log(`Selected scales: ${selectedScales.join(", ")}`);
-  };
-
   // Get current datetime in format compatible with datetime-local input
   const getCurrentDateTime = () => {
     const now = new Date();
@@ -335,28 +329,16 @@ export default function DashboardPage() {
     }
   };
 
-  // Handle adding a new input list
-  const handleAddInputList = () => {
-    const newInputList: DynamicInputItem = {
-      id: Date.now(), // unique ID
-      inputListName: "Custom Header",
-      inputs: initialInputs
-    };
-    setDynamicInputs([...dynamicInputs, newInputList]);
-    setInputListCount(prev => prev + 1);
-  };
-
   // Handle updates from child InputList
   const handleUpdateInputList = (updatedData: DynamicInputItem) => {
     if (!updatedData.id) return;
 
-    setDynamicInputs(prev =>
-      prev.map(item =>
-        item.id === updatedData.id ? { ...item, ...updatedData } : item
-      )
+    setDynamicInputs((prev) =>
+      prev.map((item) =>
+        item.id === updatedData.id ? { ...item, ...updatedData } : item,
+      ),
     );
   };
-
 
   const handleTableSaved = (savedTables: ReportItem["dynamic_tables"]) => {
     // Update the dynamictables state with saved data from database
@@ -367,28 +349,27 @@ export default function DashboardPage() {
     setDbTableCount(savedTables.length);
   };
 
-  const handleSiteConstantsUpdate = (updatedConstants: SiteConstantsInterface) => {
+  const handleSiteConstantsUpdate = (
+    updatedConstants: SiteConstantsInterface,
+  ) => {
     if (sitedata) {
       setSiteData({
         ...sitedata,
-        siteConstants: updatedConstants
+        siteConstants: updatedConstants,
       });
     }
   };
 
-
   const handleSiteHeadersUpdate = (updatedheaders: ReportItem["headers"]) => {
-
     // Update the headers state variable
     setHeaders(updatedheaders);
 
     if (sitedata) {
       setSiteData({
         ...sitedata,
-        headers: updatedheaders
+        headers: updatedheaders,
       });
     }
-
   };
 
   const handleprimaryScalesUpdate = (updatedprimaryScales: string[]) => {
@@ -396,36 +377,40 @@ export default function DashboardPage() {
     if (sitedata) {
       setSiteData({
         ...sitedata,
-        primaryScales: updatedprimaryScales
+        primaryScales: updatedprimaryScales,
       });
     }
   };
 
   const handleScalesUpdate = (updatedScales: ReportItem["scales"]) => {
-
     setScales(updatedScales);
     if (sitedata) {
       setSiteData({
         ...sitedata,
-        scales: updatedScales
+        scales: updatedScales,
       });
     }
   };
 
-
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <Navbar />
+    <>
       <h1 className="text-xl font-normal px-2">{dashboardname} DASHBOARD</h1>
 
       {loading ? (
         <Loading />
       ) : (
-        <main className="flex-1 mt-20">
+        <>
           {sitedata && (
             <>
-              <SiteHeaderCard site={sitedata} siteName={siteName} reportType={dashboardname} />
-              <SiteCompletenessPanel site={sitedata} onTabChange={(tab) => setActiveTab(tab)} />
+              <SiteHeaderCard
+                site={sitedata}
+                siteName={siteName}
+                reportType={dashboardname}
+              />
+              <SiteCompletenessPanel
+                site={sitedata}
+                onTabChange={(tab) => setActiveTab(tab)}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2 p-2 bg-background text-foreground">
                 <div className="p-4 shadow-md shadow-gray-200 border rounded-md flex items-center justify-between bg-background text-foreground">
                   <span className="bg-background text-foreground text-lg">
@@ -510,7 +495,12 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex flex-col py-3 px-2">
-                <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="iot" className="w-[100%]">
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  defaultValue="iot"
+                  className="w-[100%]"
+                >
                   <TabsList>
                     <TabsTrigger value="iot">IOT</TabsTrigger>
                     <TabsTrigger value="iotnplc">IOT & PLC</TabsTrigger>
@@ -525,7 +515,10 @@ export default function DashboardPage() {
                         siteConstants={sitedata.siteConstants}
                         onUpdate={handleSiteConstantsUpdate}
                       />
-                      <DynamicinputList headers={headers} onUpdate={handleSiteHeadersUpdate} />
+                      <DynamicinputList
+                        headers={headers}
+                        onUpdate={handleSiteHeadersUpdate}
+                      />
 
                       <PrimaryScalesSelector
                         scales={scales}
@@ -575,7 +568,14 @@ export default function DashboardPage() {
                     </div>
 
                     <SharedTable
-                      title={["Scale Name", "ICCID", "Device Address", "Totalizer", "Flow", "Opening MTD"]}
+                      title={[
+                        "Scale Name",
+                        "ICCID",
+                        "Device Address",
+                        "Totalizer",
+                        "Flow",
+                        "Opening MTD",
+                      ]}
                       scales={scales}
                       onUpdate={handleScalesUpdate}
                     />
@@ -617,7 +617,6 @@ export default function DashboardPage() {
                           onUpdate={handleUpdateInputList}
                         />
                       ))}
-
                     </div>
 
                     {/* Render Tables */}
@@ -630,7 +629,7 @@ export default function DashboardPage() {
                           setDynamictables={setDynamictables}
                           setDbTableCount={setDbTableCount}
                           tableCount={dbtableCount}
-                          onSave={handleTableSaved}  // Add this prop
+                          onSave={handleTableSaved} // Add this prop
                         />
                       ))}
 
@@ -642,7 +641,7 @@ export default function DashboardPage() {
                           setDynamictables={setDynamictables}
                           setDbTableCount={setDbTableCount}
                           tableCount={dbtableCount}
-                          onSave={handleTableSaved}  // Add this prop
+                          onSave={handleTableSaved} // Add this prop
                         />
                       ))}
                     </div>
@@ -651,10 +650,8 @@ export default function DashboardPage() {
               </div>
             </>
           )}
-        </main>
+        </>
       )}
-
-      {sitedata && <Footer />}
-    </div>
+    </>
   );
 }

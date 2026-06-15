@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { client } from "@/service/schemaClient";
 import { ReportItem } from "@/types/schema";
-import Footer from "@/components/layout/footer";
-import Navbar from "@/components/layout/navbar";
 import Loading from "@/components/widgets/loading";
 import { DataTable } from "@/components/dashboard/DataTable";
 import { Button } from "@/components/ui/button";
@@ -19,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { runprogressiveShiftReport } from "../api/progressive.route";
+import { runprogressiveShiftReport } from "../../api/progressive.route";
 
 const ProgressiveReporting = () => {
   const [loading, setLoading] = useState(false);
@@ -104,21 +102,13 @@ const ProgressiveReporting = () => {
     : [];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1 p-1 h-f mt-20">
-        {loading ? (
-          <Loading />
-        ) : (
-          <DataTable
-            title={"Progressive Sites"}
-            data={data}
-            columns={columns}
-          />
-        )}
-      </main>
-      <Footer />
-    </div>
+    <>
+      {loading ? (
+        <Loading />
+      ) : (
+        <DataTable title={"Progressive Sites"} data={data} columns={columns} />
+      )}
+    </>
   );
 };
 

@@ -30,12 +30,8 @@ export default function App() {
   }, [router]);
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <Navbar />
-      <main className="flex-1 p-1 mt-20 ">
+  <>
         <DynamicDashboardlist />
-      </main>
-      <Footer />
-    </div>
+     </>
   );
 }

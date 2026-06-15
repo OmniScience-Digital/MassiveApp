@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { client } from "@/service/schemaClient";
 import { ReportItem } from "@/types/schema";
-import Footer from "@/components/layout/footer";
-import Navbar from "@/components/layout/navbar";
 import Loading from "@/components/widgets/loading";
 import { DataTable } from "@/components/dashboard/DataTable";
 import { Button } from "@/components/ui/button";
@@ -82,12 +80,10 @@ const Auditor = () => {
   }));
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1 mt-20 p-4">
+    <>
 
         {view === "home" && (
-          <div className="max-w-2xl mx-auto mt-10">
+          <div className="max-w-2xl mx-auto">
             <h1 className="text-2xl font-bold mb-1">Auditing</h1>
             <p className="text-sm text-muted-foreground mb-8">Choose what you want to do.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -126,7 +122,7 @@ const Auditor = () => {
 
         {view === "sites" && (
           <>
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 ">
               <button onClick={() => setView("home")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 ← Back
               </button>
@@ -149,9 +145,7 @@ const Auditor = () => {
             <DataManager />
           </>
         )}
-      </main>
-      <Footer />
-    </div>
+   </>
   );
 };
 

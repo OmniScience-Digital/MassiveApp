@@ -13,7 +13,6 @@ import {
   Ruler,
   Scale,
 } from "lucide-react";
-import Navbar from "@/components/layout/navbar";
 import DynamicTable from "@/components/widgets/tables/dynamictable";
 import InputList from "@/components/widgets/InputList";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,6 @@ import Loading from "@/components/widgets/loading";
 import SiteConstants from "@/components/widgets/siteconstants/siteConstants";
 import DynamicinputList from "@/components/widgets/headers/dynamicinputList";
 import SharedTable from "@/components/widgets/scales/Scales";
-import Footer from "@/components/layout/footer";
 import { FormulaEditor } from "@/components/widgets/tables/formulaEditor";
 import { PrimaryScalesSelector } from "@/components/widgets/PrimaryScalesSelector";
 import ResponseModal from "@/components/widgets/response";
@@ -122,7 +120,6 @@ export default function DashboardPage() {
       const { data: site, errors } = await client.models.Sites.get({
         id: id,
       });
-      
 
       if (errors) {
         console.error("Error fetching site:", errors);
@@ -538,13 +535,11 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <Navbar />
-
+    <>
       {loading ? (
         <Loading />
       ) : (
-        <main className="flex-1 overflow-auto mt-20">
+        <>
           {sitedata && (
             <>
               <SiteHeaderCard
@@ -837,7 +832,14 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                       <SharedTable
-                        title={["Scale Name", "ICCID", "Device Address", "Totalizer", "Flow", "Opening MTD"]}
+                        title={[
+                          "Scale Name",
+                          "ICCID",
+                          "Device Address",
+                          "Totalizer",
+                          "Flow",
+                          "Opening MTD",
+                        ]}
                         scales={scales}
                         onUpdate={handleScalesUpdate}
                       />
@@ -978,7 +980,7 @@ export default function DashboardPage() {
               </Tabs>
             </>
           )}
-        </main>
+        </>
       )}
 
       {show && (
@@ -988,8 +990,6 @@ export default function DashboardPage() {
           setShow={setShow}
         />
       )}
-
-      {sitedata && <Footer />}
-    </div>
+    </>
   );
 }

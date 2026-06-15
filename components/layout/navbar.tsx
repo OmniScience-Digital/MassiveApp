@@ -24,6 +24,8 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState("");
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+
   const getIsTestEnv = () => {
   if (typeof window === "undefined") {
     return false;
@@ -35,15 +37,14 @@ export default function Navbar() {
     return true;
   }
 
-  // const redirectUris: string[] = amplifyOutputs.auth.oauth.redirect_sign_in_uri;
+  const redirectUris: string[] = amplifyOutputs.auth.oauth.redirect_sign_in_uri;
+  const matchedUri = redirectUris.find((uri) => uri.includes(hostname));
 
-  // const matchedUri = redirectUris.find((uri) => uri.includes(hostname));
+  if (!matchedUri) {
+    return false;
+  }
 
-  // if (!matchedUri) {
-  //   return false;
-  // }
-
-  // return matchedUri.includes("test.");
+  return matchedUri.includes("test.");
 };
 
 const isTestEnv = getIsTestEnv();
@@ -105,7 +106,7 @@ const isTestEnv = getIsTestEnv();
   const darkModeReady = isDarkMode !== null;
 
   return (
-    <div className="fixed top-0 left-0 w-full z-50">
+    <div className="fixed top-0 left-0 w-full z-50 mb-10">
       <header className="flex items-center justify-between bg-gray-700 p-4 border-b shadow-md">
         {/* Logo */}
         <Link href="/" className="flex items-center cursor-pointer">
@@ -205,6 +206,7 @@ const isTestEnv = getIsTestEnv();
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
       </header>
 
       {isTestEnv && (
@@ -214,6 +216,7 @@ const isTestEnv = getIsTestEnv();
           <span>⚠</span>
         </div>
       )}
+
       <Breadcrumbs />
       {isSigningOut && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">

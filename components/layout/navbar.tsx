@@ -35,15 +35,15 @@ export default function Navbar() {
     return true;
   }
 
-  const redirectUris: string[] = amplifyOutputs.auth.oauth.redirect_sign_in_uri;
+  // const redirectUris: string[] = amplifyOutputs.auth.oauth.redirect_sign_in_uri;
 
-  const matchedUri = redirectUris.find((uri) => uri.includes(hostname));
+  // const matchedUri = redirectUris.find((uri) => uri.includes(hostname));
 
-  if (!matchedUri) {
-    return false;
-  }
+  // if (!matchedUri) {
+  //   return false;
+  // }
 
-  return matchedUri.includes("test.");
+  // return matchedUri.includes("test.");
 };
 
 const isTestEnv = getIsTestEnv();

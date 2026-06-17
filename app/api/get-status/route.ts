@@ -7,7 +7,9 @@ export async function GET() {
     // Force no caching
     const response = await fetch(
       `${constants.securebaseUrltest}/simulatorstatus`,
-      {
+      {headers: {
+          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET_KEY ?? "", 
+        },
         cache: "no-store", 
       },
     );

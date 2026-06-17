@@ -304,11 +304,12 @@ export default function DashboardPage() {
     try {
       if (!shift || shift.trim() === "") {
         setLoadingBtn(false);
+        setRunreport(false);
         setMessage("Please select shift");
         setShow(true);
         setSuccessful(false);
         setLoadingBtn(false);
-        setRunreport(false);
+  
         return;
       }
 

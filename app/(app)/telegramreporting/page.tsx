@@ -73,6 +73,11 @@ const Automatedreporting = () => {
   const [checkedItemsFTP, setCheckedItemsFTP] = useState<
     Record<string, boolean>
   >({});
+
+  const [checkedItemsRPT, setCheckedItemsRPT] = useState<
+    Record<string, boolean>
+  >({});
+
   const [stopTimes, setStopTimes] = useState<StopTimesState>({
     dayStop: [],
     nightStop: [],
@@ -116,6 +121,7 @@ const Automatedreporting = () => {
     setCheckedItemsProgressive(toMap("progressive"));
     setCheckedItemshourly(toMap("hourly"));
     setCheckedItemsFTP(toMap("ftp"));
+    setCheckedItemsRPT(toMap("rpt"));
   }, [submittedsites]);
 
   const handleSubmit = async (data: ReportItem) => {
@@ -163,6 +169,7 @@ const Automatedreporting = () => {
       progressive: checkedItemsProgressive[site.id] || false,
       hourly: checkedItemsHourly[site.id] || false,
       ftp: checkedItemsFTP[site.id] || false,
+      rpt: checkedItemsRPT[site.id] || false,
     }));
 
   const makeCheckboxCol = (
@@ -307,6 +314,7 @@ const Automatedreporting = () => {
       setCheckedItemshourly,
     ),
     makeCheckboxCol("ftp", "FTP", checkedItemsFTP, setCheckedItemsFTP),
+    makeCheckboxCol("rpt", "RPT", checkedItemsRPT, setCheckedItemsRPT),
   ];
 
   const prodCount = submittedsites.filter(

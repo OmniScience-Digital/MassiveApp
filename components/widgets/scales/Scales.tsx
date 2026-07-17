@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Columns3 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ResponseModal from "../response";
 import { saveAllScales, deleteTelegramScale } from "@/service/scales.Service";
-import { ReportItem } from "@/types/schema";
+import { ReportItem, ScaleColumnConfig } from "@/types/schema";
 
 interface ScaleRow {
   id?: string;
@@ -36,19 +36,45 @@ interface ScaleRow {
   flow: string;
   openingScaletons: string;
   isPlc?: boolean;
+  customFields?: { [key: string]: string };
 }
 
 interface SharedTableProps {
   title: string[];
   scales: ScaleRow[];
+  columns?: ScaleColumnConfig[];
   onUpdate?: (scales: ReportItem["scales"]) => void;
+  onColumnsUpdate?: (columns: ScaleColumnConfig[]) => void;
 }
 
-const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
+// Fixed column widths (px). ICCID is reduced 40% off its base width (220 -> 132);
+// every other data column is reduced 50% off its base width.
+const FIXED_COLUMNS: { key: keyof ScaleRow; label: string; width: number }[] = [
+  { key: "scalename", label: "Scale Name", width: 50 }, // base 160, -50%
+  { key: "iccid", label: "ICCID", width: 80 }, // base 220, -40%
+  { key: "deviceAddress", label: "Device Address", width: 20 }, // base 140, -50%
+  { key: "totalizer", label: "Totalizer", width: 20 }, // base 140, -50%
+  { key: "monthTons", label: "Month Tons", width: 20 }, // base 140, -50%
+  { key: "flow", label: "Flow", width: 20 }, // base 120, -50%
+  { key: "openingScaletons", label: "Opening MTD", width: 30 }, // base 140, -50%
+];
+
+const CUSTOM_COLUMN_WIDTH = 100;
+
+const SharedTable = ({
+  scales,
+  columns,
+  onUpdate,
+  onColumnsUpdate,
+}: SharedTableProps) => {
   const { id } = useParams<{ id: string }>();
 
   const [rows, setRows] = useState<ScaleRow[]>(scales);
+  const [customColumns, setCustomColumns] = useState<ScaleColumnConfig[]>(
+    columns ?? [],
+  );
   const [dirtyRows, setDirtyRows] = useState<Set<number>>(new Set());
+  const [columnsDirty, setColumnsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [rowToDelete, setRowToDelete] = useState<ScaleRow | null>(null);
@@ -67,7 +93,57 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
     flow: "",
     openingScaletons: "",
     isPlc: false,
+    customFields: Object.fromEntries(customColumns.map((c) => [c.key, ""])),
   });
+
+  const handleAddColumn = () => {
+    const newColumn: ScaleColumnConfig = {
+      key: `custom_${Date.now()}`,
+      label: `Custom ${customColumns.length + 1}`,
+    };
+    setCustomColumns((prev) => [...prev, newColumn]);
+    setRows((prev) =>
+      prev.map((r) => ({
+        ...r,
+        customFields: { ...r.customFields, [newColumn.key]: "" },
+      })),
+    );
+    setColumnsDirty(true);
+  };
+
+  const handleRenameColumn = (key: string, label: string) => {
+    setCustomColumns((prev) =>
+      prev.map((c) => (c.key === key ? { ...c, label } : c)),
+    );
+    setColumnsDirty(true);
+  };
+
+  const handleDeleteColumn = (key: string) => {
+    setCustomColumns((prev) => prev.filter((c) => c.key !== key));
+    setRows((prev) =>
+      prev.map((r) => {
+        const { [key]: _removed, ...rest } = r.customFields ?? {};
+        return { ...r, customFields: rest };
+      }),
+    );
+    setColumnsDirty(true);
+  };
+
+  const handleCustomFieldChange =
+    (idx: number, key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setRows((prev) => {
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          customFields: {
+            ...updated[idx].customFields,
+            [key]: e.target.value,
+          },
+        };
+        return updated;
+      });
+      setDirtyRows((prev) => new Set(prev).add(idx));
+    };
 
   const handleChange =
     (idx: number, field: keyof ScaleRow) =>
@@ -112,10 +188,12 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
     setSaving(true);
     try {
       const payload = rows.map(({ id: _id, ...rest }) => rest);
-      const result = await saveAllScales(id as string, payload);
+      const result = await saveAllScales(id as string, payload, customColumns);
       if (result) {
         setDirtyRows(new Set());
+        setColumnsDirty(false);
         onUpdate?.(payload);
+        onColumnsUpdate?.(customColumns);
         setSuccessful(true);
         setMessage("All scales saved successfully");
       } else {
@@ -180,13 +258,20 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
       {/* Action bar */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          {dirtyRows.size > 0 && (
+          {(dirtyRows.size > 0 || columnsDirty) && (
             <span className="text-xs text-amber-500">
-              {dirtyRows.size} unsaved change{dirtyRows.size > 1 ? "s" : ""}
+              {dirtyRows.size > 0 &&
+                `${dirtyRows.size} unsaved change${dirtyRows.size > 1 ? "s" : ""}`}
+              {dirtyRows.size > 0 && columnsDirty && " · "}
+              {columnsDirty && "unsaved column changes"}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleAddColumn}>
+            <Columns3 className="mr-2 h-4 w-4" />
+            Add Column
+          </Button>
           <Button variant="outline" onClick={handleAddRow}>
             <Plus className="mr-2 h-4 w-4" />
             Add Scale
@@ -206,7 +291,7 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
           </Button>
           <Button
             onClick={handleSaveAll}
-            disabled={saving || dirtyRows.size === 0}
+            disabled={saving || (dirtyRows.size === 0 && !columnsDirty)}
           >
             {saving ? (
               <>
@@ -228,13 +313,33 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
           <TableHeader>
             <TableRow>
               <TableHead className="w-8">#</TableHead>
-              <TableHead>Scale Name</TableHead>
-              <TableHead>ICCID</TableHead>
-              <TableHead>Device Address</TableHead>
-              <TableHead>Totalizer</TableHead>
-              <TableHead>Month Tons</TableHead>
-              <TableHead>Flow</TableHead>
-              <TableHead>Opening MTD</TableHead>
+              {FIXED_COLUMNS.map((col) => (
+                <TableHead key={col.key} style={{ width: col.width }}>
+                  {col.label}
+                </TableHead>
+              ))}
+              {customColumns.map((col) => (
+                <TableHead key={col.key} style={{ width: CUSTOM_COLUMN_WIDTH }}>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="text"
+                      value={col.label}
+                      onChange={(e) =>
+                        handleRenameColumn(col.key, e.target.value)
+                      }
+                      className="h-7 text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteColumn(col.key)}
+                      title="Remove column"
+                      className="text-muted-foreground hover:text-red-500 shrink-0"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </TableHead>
+              ))}
               <TableHead className="w-20 text-center">PLC</TableHead>
               <TableHead className="w-24">Delete</TableHead>
             </TableRow>
@@ -243,7 +348,7 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={FIXED_COLUMNS.length + customColumns.length + 3}
                   className="text-center text-sm text-muted-foreground py-6"
                 >
                   No scales yet — click <strong>Add Scale</strong> to get
@@ -261,72 +366,40 @@ const SharedTable = ({ scales, onUpdate }: SharedTableProps) => {
                 <TableCell className="text-muted-foreground text-sm">
                   {index + 1}
                 </TableCell>
-                <TableCell>
-                  <Input
-                    type="text"
-                    value={row.scalename}
-                    onChange={handleChange(index, "scalename")}
-                    placeholder="Scale name"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="text"
-                    value={row.iccid}
-                    onChange={handleChange(index, "iccid")}
-                    placeholder="ICCID"
-                  />
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground select-none whitespace-nowrap">
-                      modbus-
-                    </span>
+                {FIXED_COLUMNS.map((col) => (
+                  <TableCell key={col.key} style={{ width: col.width }}>
+                    {col.key === "deviceAddress" ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground select-none whitespace-nowrap">
+                          modbus-
+                        </span>
+                        <Input
+                          type="text"
+                          value={row.deviceAddress?.replace(/^modbus-/, "") ?? ""}
+                          onChange={handleDeviceAddressChange(index)}
+                          placeholder="address"
+                        />
+                      </div>
+                    ) : (
+                      <Input
+                        type="text"
+                        value={(row[col.key] as string) ?? ""}
+                        onChange={handleChange(index, col.key)}
+                        placeholder={col.label}
+                      />
+                    )}
+                  </TableCell>
+                ))}
+                {customColumns.map((col) => (
+                  <TableCell key={col.key} style={{ width: CUSTOM_COLUMN_WIDTH }}>
                     <Input
                       type="text"
-                      value={row.deviceAddress?.replace(/^modbus-/, "") ?? ""}
-                      onChange={handleDeviceAddressChange(index)}
-                      className="w-24"
-                      placeholder="address"
+                      value={row.customFields?.[col.key] ?? ""}
+                      onChange={handleCustomFieldChange(index, col.key)}
+                      placeholder={col.label}
                     />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="text"
-                    value={row.totalizer ?? ""}
-                    onChange={handleChange(index, "totalizer")}
-                    className="w-28"
-                    placeholder="Totalizer"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="text"
-                    value={row.monthTons ?? ""}
-                    onChange={handleChange(index, "monthTons")}
-                    className="w-28"
-                    placeholder="Month tons"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="text"
-                    value={row.flow ?? ""}
-                    onChange={handleChange(index, "flow")}
-                    className="w-24"
-                    placeholder="Flow"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="text"
-                    value={row.openingScaletons}
-                    onChange={handleChange(index, "openingScaletons")}
-                    className="w-28"
-                    placeholder="Opening MTD"
-                  />
-                </TableCell>
+                  </TableCell>
+                ))}
                 <TableCell className="text-center">
                   <button
                     type="button"

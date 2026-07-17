@@ -68,7 +68,11 @@ export type ReportItem = {
     flow: string;
     openingScaletons: string;
      isPlc?: boolean;
+     // Values for any user-added dynamic columns, keyed by ScaleColumnConfig["key"]
+     customFields?: { [key: string]: string };
   }[];
+  // User-defined extra columns for the scales table (dynamically added/removed in the UI)
+  scaleColumns?: ScaleColumnConfig[];
   headers: {
     headername: string;
   }[];
@@ -77,6 +81,8 @@ export type ReportItem = {
     formulaname: string;
     formula: string;
     virtualformula: boolean;
+    minKpi?: string;
+    maxKpi?: string;
   }[];
 
   dynamic_inputs: {
@@ -138,4 +144,13 @@ export type ScalePayload = {
   flow: string;
   openingScaletons: string;
   isPlc?: boolean;
+  customFields?: { [key: string]: string };
+};
+
+// Definition of a user-added dynamic column on the Scales table.
+// `key` is a stable identifier used to store/read values on each row's
+// `customFields`; `label` is the editable display name shown in the header.
+export type ScaleColumnConfig = {
+  key: string;
+  label: string;
 };

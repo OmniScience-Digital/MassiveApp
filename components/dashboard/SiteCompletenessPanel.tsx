@@ -22,12 +22,15 @@ const hasSiteTimes = (site: ReportItem) => {
   if (!st) return false;
   // 24-hour shift sites only need monthstart
   if (st.twentyFourhourShift) return isValidShiftTime(st.monthstart);
-  return (
-    isValidShiftTime(st.dayStart) &&
-    isValidShiftTime(st.dayStop) &&
-    isValidShiftTime(st.nightStart) &&
-    isValidShiftTime(st.nightStop)
-  );
+
+  const dayValid = isValidShiftTime(st.dayStart) && isValidShiftTime(st.dayStop);
+  const nightValid = isValidShiftTime(st.nightStart) && isValidShiftTime(st.nightStop);
+  const extraValid =
+    isValidShiftTime(st.extraShiftStart) && isValidShiftTime(st.extraShiftStop);
+
+  // Reporting only needs one complete, valid shift (day, night, or extra) —
+  // it's not necessary for every shift to be configured.
+  return dayValid || nightValid || extraValid;
 };
 
 // ─── checklist definition ──────────────────────────────────────────────────
@@ -71,7 +74,7 @@ export function buildChecklist(site: ReportItem): CheckItem[] {
     {
       key: "siteTimes",
       label: "Shift Times",
-      description: "Day/night start & stop times must be set and not in the 23:xx hour",
+      description: "At least one shift (day, night, or extra) needs valid start & stop times, not in the 23:xx hour",
       critical: true,
       ok: hasSiteTimes(site),
       tab: "schedules",

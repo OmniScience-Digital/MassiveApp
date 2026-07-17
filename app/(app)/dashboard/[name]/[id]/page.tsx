@@ -65,6 +65,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [shift, setShift] = useState<string>("");
   const [scales, setScales] = useState<ReportItem["scales"]>([]);
+  const [scaleColumns, setScaleColumns] = useState<ReportItem["scaleColumns"]>(
+    [],
+  );
   const [headers, setHeaders] = useState<ReportItem["headers"]>([]);
   const [primaryScales, setPrimaryScales] = useState<string[]>([]);
   const [formulas, setFormulas] = useState<ReportItem["formulas"]>([]);
@@ -153,6 +156,7 @@ export default function DashboardPage() {
           rpt_inputs: parsedSite.rpt_inputs || [],
           rpt_tables: parsedSite.rpt_tables || [],
           scales: parsedSite.scales || [],
+          scaleColumns: parsedSite.scaleColumns || [],
           headers: parsedSite.headers || [],
           formulas: parsedSite.formulas || [],
           primaryScales: parsedSite.primaryScales || [],
@@ -245,6 +249,7 @@ export default function DashboardPage() {
         setSiteName(siteData.siteConstants.siteName);
         setSelectedValue(siteData.siteStatus);
         setScales(siteData.scales);
+        setScaleColumns(siteData.scaleColumns || []);
         setHeaders(siteData.headers);
         setFormulas(siteData.formulas);
         setPrimaryScales(siteData.primaryScales);
@@ -280,6 +285,7 @@ export default function DashboardPage() {
       setSiteName(siteData.siteConstants.siteName);
       setSelectedValue(siteData.siteStatus);
       setScales(siteData.scales);
+      setScaleColumns(siteData.scaleColumns || []);
       setHeaders(siteData.headers);
       setFormulas(siteData.formulas);
       setPrimaryScales(siteData.primaryScales);
@@ -535,6 +541,18 @@ export default function DashboardPage() {
     }
   };
 
+  const handleScaleColumnsUpdate = (
+    updatedColumns: ReportItem["scaleColumns"],
+  ) => {
+    setScaleColumns(updatedColumns);
+    if (sitedata) {
+      setSiteData({
+        ...sitedata,
+        scaleColumns: updatedColumns,
+      });
+    }
+  };
+
   return (
     <>
       {loading ? (
@@ -610,9 +628,16 @@ export default function DashboardPage() {
                   </div>
                   <Button
                     onClick={() => {
-                      logSelectedShift(selectedShift);
+                      if (!selectedShift || selectedShift.trim() === "") {
+                        setMessage("Please select a shift");
+                        setShow(true);
+                        setSuccessful(false);
+                        return;
+                      }
                       setRunreport(true);
+                      logSelectedShift(selectedShift);
                     }}
+                    disabled={!selectedShift || runreport}
                   >
                     {runreport ? (
                       <Loader2 className="animate-spin" />
@@ -842,7 +867,9 @@ export default function DashboardPage() {
                           "Opening MTD",
                         ]}
                         scales={scales}
+                        columns={scaleColumns}
                         onUpdate={handleScalesUpdate}
+                        onColumnsUpdate={handleScaleColumnsUpdate}
                       />
                     </CardContent>
                   </Card>

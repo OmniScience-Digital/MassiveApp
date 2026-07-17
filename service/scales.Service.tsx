@@ -1,4 +1,4 @@
-import { ScalePayload } from "@/types/schema";
+import { ScalePayload, ScaleColumnConfig } from "@/types/schema";
 import { client } from "./schemaClient";
 
 export const createTelegramScale = async (
@@ -126,6 +126,7 @@ export const updateTelegramScale = async (
 export const saveAllScales = async (
   id: string,
   scales: ScalePayload[],
+  columns?: ScaleColumnConfig[],
 ): Promise<any | null> => {
   try {
     const { data: site, errors } = await client.models.Sites.get({ id });
@@ -139,6 +140,9 @@ export const saveAllScales = async (
       typeof site.site === "string" ? JSON.parse(site.site) : site.site;
 
     parsedSite.scales = scales;
+    if (columns) {
+      parsedSite.scaleColumns = columns;
+    }
 
     const updateResponse = await client.models.Sites.update({
       id,

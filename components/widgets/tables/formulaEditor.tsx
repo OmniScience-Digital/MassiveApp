@@ -118,6 +118,8 @@ export const FormulaEditor = ({
       formulaname: "",
       formula: "",
       virtualformula: false,
+      minKpi: "",
+      maxKpi: "",
     });
     setIsDialogOpen(true);
   };
@@ -235,6 +237,8 @@ export const FormulaEditor = ({
           <TableRow>
             <TableHead>Formula Name</TableHead>
             <TableHead>Formula</TableHead>
+            <TableHead>Min KPI</TableHead>
+            <TableHead>Max KPI</TableHead>
             <TableHead>VS</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -246,6 +250,8 @@ export const FormulaEditor = ({
                 {formula.formulaname}
               </TableCell>
               <TableCell className="font-mono">{formula.formula}</TableCell>
+              <TableCell className="font-mono">{formula.minKpi || "-"}</TableCell>
+              <TableCell className="font-mono">{formula.maxKpi || "-"}</TableCell>
               <TableCell className="font-mono">
                 <Checkbox
                   id={`formula-${formula.formulaname}`}
@@ -291,6 +297,41 @@ export const FormulaEditor = ({
                 }
                 className="w-full p-2 border rounded text-black"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Min KPI
+                </label>
+                <input
+                  type="text"
+                  value={editingFormula?.minKpi || ""}
+                  onChange={(e) =>
+                    setEditingFormula((prev) =>
+                      prev ? { ...prev, minKpi: e.target.value } : null,
+                    )
+                  }
+                  placeholder="e.g. 80"
+                  className="w-full p-2 border rounded text-black"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Max KPI
+                </label>
+                <input
+                  type="text"
+                  value={editingFormula?.maxKpi || ""}
+                  onChange={(e) =>
+                    setEditingFormula((prev) =>
+                      prev ? { ...prev, maxKpi: e.target.value } : null,
+                    )
+                  }
+                  placeholder="e.g. 100"
+                  className="w-full p-2 border rounded text-black"
+                />
+              </div>
             </div>
 
             <div>

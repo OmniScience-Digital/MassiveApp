@@ -46,6 +46,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false); // Loading state
 
   const [scales, setScales] = useState<ReportItem["scales"]>([]);
+  const [scaleColumns, setScaleColumns] = useState<ReportItem["scaleColumns"]>(
+    [],
+  );
   const [headers, setHeaders] = useState<ReportItem["headers"]>([]);
   const [primaryScales, setPrimaryScales] = useState<string[]>([]);
   const [formulas, setFormulas] = useState<ReportItem["formulas"]>([]);
@@ -121,6 +124,7 @@ export default function DashboardPage() {
           dynamic_inputs: parsedSite.dynamic_inputs || [],
           dynamic_tables: parsedSite.dynamic_tables || [],
           scales: parsedSite.scales || [],
+          scaleColumns: parsedSite.scaleColumns || [],
           headers: parsedSite.headers || [],
           formulas: parsedSite.formulas || [],
           primaryScales: parsedSite.primaryScales || [],
@@ -213,6 +217,7 @@ export default function DashboardPage() {
         setSiteName(siteData.siteConstants.siteName);
         setSelectedValue(siteData.siteStatus);
         setScales(siteData.scales);
+        setScaleColumns(siteData.scaleColumns || []);
         setHeaders(siteData.headers);
         setFormulas(siteData.formulas);
         setPrimaryScales(siteData.primaryScales);
@@ -237,6 +242,7 @@ export default function DashboardPage() {
       setSiteName(siteData.siteConstants.siteName);
       setSelectedValue(siteData.siteStatus);
       setScales(siteData.scales);
+      setScaleColumns(siteData.scaleColumns || []);
       setHeaders(siteData.headers);
       setFormulas(siteData.formulas);
       setPrimaryScales(siteData.primaryScales);
@@ -388,6 +394,18 @@ export default function DashboardPage() {
       setSiteData({
         ...sitedata,
         scales: updatedScales,
+      });
+    }
+  };
+
+  const handleScaleColumnsUpdate = (
+    updatedColumns: ReportItem["scaleColumns"],
+  ) => {
+    setScaleColumns(updatedColumns);
+    if (sitedata) {
+      setSiteData({
+        ...sitedata,
+        scaleColumns: updatedColumns,
       });
     }
   };
@@ -577,7 +595,9 @@ export default function DashboardPage() {
                         "Opening MTD",
                       ]}
                       scales={scales}
+                      columns={scaleColumns}
                       onUpdate={handleScalesUpdate}
+                      onColumnsUpdate={handleScaleColumnsUpdate}
                     />
                   </TabsContent>
                   <TabsContent value="iotnplc">

@@ -1,12 +1,9 @@
 import { client } from "./schemaClient";
+import { ReportItem } from "@/types/schema";
 
 export const createFormula = async (
   id: string,
-  formulaobj: {
-    formulaname: string;
-    formula: string;
-    virtualformula: boolean;
-  },
+  formulaobj: ReportItem["formulas"][0],
 ) => {
   try {
     // Step 1: Fetch the existing site data
@@ -118,11 +115,7 @@ export const deleteFormula = async (id: string, formulaname: string) => {
 
 export const updateFormula = async (
   id: string,
-  formulaobj: {
-    formulaname: string;
-    formula: string;
-    virtualformula: boolean;
-  },
+  formulaobj: ReportItem["formulas"][0],
 ) => {
   try {
     // [1] Fetch site data

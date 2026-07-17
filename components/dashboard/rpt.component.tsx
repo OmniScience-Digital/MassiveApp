@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,23 +54,69 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
         return dateIndex;
     };
 
+    // Pull the currently configured month start/end so we can react to changes
+    const rptConfig = dynamicInputs.find(
+        item => item.inputListName === "RPT Basic Configuration"
+    );
+    const monthStart = rptConfig?.inputs.find(i => i.label === "Month Start Date and Time")?.value || "";
+    const monthEnd = rptConfig?.inputs.find(i => i.label === "Month End Date and Time")?.value || "";
+
+    // Build a fresh Date Index table (all rows default to "1")
+    const buildDateIndexTable = (
+        existingId?: ReportItem["dynamic_tables"][0]["id"],
+    ): ReportItem["dynamic_tables"][0] => {
+        const dateIndex = generateDateIndex(monthStart, monthEnd);
+        return {
+            id: existingId ?? Date.now(),
+            tableName: "Date Index",
+            columns: ["Date", "Date Index"],
+            data: dateIndex.map((item, index) => ({
+                id: index + 1,
+                "Date": item.date,
+                "Date Index": "1", // All rows get "1" initially
+            })),
+        };
+    };
+
+    // Auto-regenerate the Date Index table whenever the configured month
+    // start/end dates change, so the table always matches the configuration
+    // without needing a manual "Generate Date Index" click.
+    useEffect(() => {
+        if (!monthStart || !monthEnd) return;
+
+        setDynamicTables(prev => {
+            const existingIndex = prev.findIndex(
+                table => table.tableName === "Date Index"
+            );
+            const existing = existingIndex !== -1 ? prev[existingIndex] : undefined;
+            const freshTable = buildDateIndexTable(existing?.id);
+
+            // Skip the update if the date range hasn't actually changed, so we
+            // don't clobber values the user has already edited on every render.
+            if (existing) {
+                const existingDates = existing.data.map(row => row["Date"]).join(",");
+                const newDates = freshTable.data.map(row => row["Date"]).join(",");
+                if (existingDates === newDates) return prev;
+
+                const updated = [...prev];
+                updated[existingIndex] = freshTable;
+                return updated;
+            }
+
+            return [...prev, freshTable];
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [monthStart, monthEnd]);
+
     // Button to generate Date Index
     const handleGenerateDateIndex = () => {
         // Find RPT Basic Configuration
-        const rptConfig = dynamicInputs.find(item =>
-            item.inputListName === "RPT Basic Configuration"
-        );
-
         if (!rptConfig) {
             setSuccessful(false);
             setMessage("Please setup RPT Basic Configuration first!");
             setShow(true);
             return;
         }
-
-        // Get dates from configuration
-        const monthStart = rptConfig.inputs.find(i => i.label === "Month Start Date and Time")?.value || "";
-        const monthEnd = rptConfig.inputs.find(i => i.label === "Month End Date and Time")?.value || "";
 
         if (!monthStart || !monthEnd) {
             setSuccessful(false);
@@ -79,30 +125,19 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
             return;
         }
 
-        const dateIndex = generateDateIndex(monthStart, monthEnd);
-
-        // Create Date Index table
-        const dateIndexTable: ReportItem["dynamic_tables"][0] = {
-            id: Date.now(),
-            tableName: "Date Index",
-            columns: ["Date", "Date Index"],
-            data: dateIndex.map((item, index) => ({
-                id: index + 1,
-                "Date": item.date,
-                "Date Index": "1",  // All rows get "1" initially
-            }))
-        };
-
         // Check if Date Index table already exists
-        const existingTableIndex = dynamicTables.findIndex(
+        const existingTable = dynamicTables.find(
             table => table.tableName === "Date Index"
         );
+        const dateIndexTable = buildDateIndexTable(existingTable?.id);
 
-        if (existingTableIndex !== -1) {
+        if (existingTable) {
             // Replace existing table
-            const updatedTables = [...dynamicTables];
-            updatedTables[existingTableIndex] = dateIndexTable;
-            setDynamicTables(updatedTables);
+            setDynamicTables(prev =>
+                prev.map(table =>
+                    table.tableName === "Date Index" ? dateIndexTable : table
+                )
+            );
         } else {
             // Add new table
             setDynamicTables(prev => [...prev, dateIndexTable]);
@@ -351,7 +386,7 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
                                         className="flex items-center gap-2"
                                     >
                                         <Calendar className="h-4 w-4" />
-                                        Generate Date Index
+                                        Regenerate Date Index
                                     </Button>
                                 </div>
 
@@ -373,7 +408,7 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
                                             ))}
 
                                         <div className="text-sm text-muted-foreground">
-                                            <p>This table is generated based on the month start and end dates from Basic Configuration. You can update the values for each date.</p>
+                                            <p>This table auto-updates whenever the month start/end dates change in Basic Configuration. Use "Regenerate Date Index" to force a refresh, or update the values for each date directly below.</p>
                                         </div>
                                     </>
                                 ) : (
@@ -382,7 +417,7 @@ export default function Rpt({ rptInputs, rpt_dynamictables }: RPTPROPS) {
                                             <Calendar className="h-12 w-12 mx-auto text-muted-foreground" />
                                             <h3 className="text-lg font-medium">No Date Index Table</h3>
                                             <p className="text-muted-foreground">
-                                                Click "Generate Date Index" button to create a Date Index table based on your month dates.
+                                                Set Month Start and End dates in Basic Configuration to auto-generate a Date Index table, or click "Regenerate Date Index" to build it now.
                                             </p>
                                             <div className="pt-4">
                                                 <p className="text-sm font-medium mb-2">Requirements:</p>

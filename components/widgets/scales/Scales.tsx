@@ -52,14 +52,14 @@ interface SharedTableProps {
 const FIXED_COLUMNS: { key: keyof ScaleRow; label: string; width: number }[] = [
   { key: "scalename", label: "Scale Name", width: 50 }, // base 160, -50%
   { key: "iccid", label: "ICCID", width: 80 }, // base 220, -40%
-  { key: "deviceAddress", label: "Device Address", width: 20 }, // base 140, -50%
-  { key: "totalizer", label: "Totalizer", width: 20 }, // base 140, -50%
-  { key: "monthTons", label: "Month Tons", width: 20 }, // base 140, -50%
-  { key: "flow", label: "Flow", width: 20 }, // base 120, -50%
-  { key: "openingScaletons", label: "Opening MTD", width: 30 }, // base 140, -50%
+  { key: "deviceAddress", label: "Device Address", width: 10 }, // base 140, -50%
+  { key: "totalizer", label: "Totalizer", width: 10 }, // base 140, -50%
+  { key: "monthTons", label: "Month Tons", width: 10 }, // base 140, -50%
+  { key: "flow", label: "Flow", width: 10 }, // base 120, -50%
+  { key: "openingScaletons", label: "Opening MTD", width: 20 }, // base 140, -50%
 ];
 
-const CUSTOM_COLUMN_WIDTH = 100;
+const CUSTOM_COLUMN_WIDTH = 10;
 
 const SharedTable = ({
   scales,

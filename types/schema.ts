@@ -1,3 +1,4 @@
+// types/schema.ts
 export type SignInFlow =
   | "signIn"
   | "signUp"
@@ -153,4 +154,46 @@ export type ScalePayload = {
 export type ScaleColumnConfig = {
   key: string;
   label: string;
+};
+
+// The fixed catalog of Status Report check "kinds". The math per kind is
+// different backend logic, but everything about *how* each instance of a
+// kind behaves (on/off, which scale field it reads, its thresholds, its
+// wording) is configured here rather than hardcoded.
+export type StatusCheckType =
+  | "totalizationLimit"
+  | "batteryState"
+  | "totalizerReset"
+  | "monthTonsReset"
+  | "modbusUpdateInterval"
+  | "modbusUpdating"
+  | "speedError"
+  | "spikeError"
+  | "zeroError"
+  | "kpiCheck"
+  | "zeroCalibration"
+  | "spanCalibration";
+
+export type StatusCheck = {
+  id: string;
+  checkType: StatusCheckType;
+  label: string; // editable display name shown as the PDF column heading
+  enabled: boolean;
+  // Which scale field this check reads (a fixed field like "totalizer"/"flow",
+  // or a key from that site's ScaleColumnConfig custom columns, e.g. "load",
+  // "speed", "zeroCalSetpoint", "spanCalSetpoint"). Not used by kpiCheck.
+  scaleField?: string;
+  // For kpiCheck only: which Formulas entry (and its minKpi/maxKpi) to evaluate.
+  formulaName?: string;
+  // Threshold values, keyed per check type (e.g. { limit: 750000 },
+  // { deviationPercent: 5 }, { cutoffPercent: 20, tolerancePercent: 2 }).
+  thresholds?: { [key: string]: number };
+  // Editable pass/fail wording so reports aren't stuck with words like
+  // "maintained"/"unsurpassed".
+  passLabel?: string;
+  failLabel?: string;
+};
+
+export type StatusReportConfig = {
+  checks: StatusCheck[];
 };

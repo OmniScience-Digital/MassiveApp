@@ -1,3 +1,4 @@
+// middleware.ts
 import { NextRequest, NextResponse } from "next/server";
 import { fetchAuthSession } from "aws-amplify/auth/server";
 import { runWithAmplifyServerContext } from "@/utils/amplifyServerUtils";
@@ -13,6 +14,7 @@ const protectedRoutes = [
   "/stockpilereporting",
   "/progressivereporting",
   "/sitesimulator",
+  "/statusreport",
 ];
 
 export default async function middleware(request: NextRequest) {

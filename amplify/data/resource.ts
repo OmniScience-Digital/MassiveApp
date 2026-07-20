@@ -32,6 +32,13 @@ const schema = a.schema({
       index("siteId").sortKeys(["rowdate"]),
     ])
     .authorization((allow) => [allow.publicApiKey()]),
+    
+    StatusReportConfig: a
+    .model({
+      checks: a.json(),
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+ 
 
     PurplefigureTable: a
     .model({

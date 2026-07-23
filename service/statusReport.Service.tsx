@@ -1,42 +1,51 @@
 // service/statusReport.Service.tsx
-import { StatusCheck } from "@/types/schema";
+import { StatusReportConfig, SiteStatusReportConfig } from "@/types/schema";
 import { client } from "./schemaClient";
 
-// The Status Report's check criteria are global — one shared config that
-// applies to every site (test + prod) — so unlike scales/formulas this is
-// NOT stored inside a Sites.site JSON blob. It lives in its own
-// StatusReportConfig model as a single well-known record.
+// The Status Report's check criteria are one shared record, but now scoped
+// per site + per scale internally — every site still runs in the
+// twice-daily report, this just controls what's checked and how for each
+// one. Stored as a single well-known record, same pattern as before.
 const GLOBAL_CONFIG_ID = "global";
 
-export const getStatusReportConfig = async (): Promise<StatusCheck[]> => {
+export const getStatusReportConfig = async (): Promise<StatusReportConfig> => {
   try {
     const { data, errors } = await client.models.StatusReportConfig.get({
       id: GLOBAL_CONFIG_ID,
     });
 
     if (errors || !data?.checks) {
-      return [];
+      return { sites: {} };
     }
 
     const parsed =
       typeof data.checks === "string" ? JSON.parse(data.checks) : data.checks;
 
-    return Array.isArray(parsed) ? (parsed as StatusCheck[]) : [];
+    if (parsed && typeof parsed === "object" && parsed.sites) {
+      return parsed as StatusReportConfig;
+    }
+    return { sites: {} };
   } catch (error) {
     console.error("Error fetching status report config:", error);
-    return [];
+    return { sites: {} };
   }
 };
 
-export const saveStatusReportConfig = async (
-  checks: StatusCheck[],
-): Promise<StatusCheck[] | null> => {
+export const saveSiteStatusReportConfig = async (
+  siteId: string,
+  siteConfig: SiteStatusReportConfig,
+): Promise<StatusReportConfig | null> => {
   try {
+    const current = await getStatusReportConfig();
+    const updated: StatusReportConfig = {
+      sites: { ...current.sites, [siteId]: siteConfig },
+    };
+
     const { data: existing } = await client.models.StatusReportConfig.get({
       id: GLOBAL_CONFIG_ID,
     });
 
-    const payload = JSON.stringify(checks);
+    const payload = JSON.stringify(updated);
 
     const response = existing
       ? await client.models.StatusReportConfig.update({
@@ -53,7 +62,7 @@ export const saveStatusReportConfig = async (
       return null;
     }
 
-    return checks;
+    return updated;
   } catch (error) {
     console.error("Error saving status report config:", error);
     return null;

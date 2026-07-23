@@ -1,4 +1,3 @@
-// types/schema.ts
 export type SignInFlow =
   | "signIn"
   | "signUp"
@@ -156,11 +155,13 @@ export type ScaleColumnConfig = {
   label: string;
 };
 
-// The fixed catalog of Status Report check "kinds". The math per kind is
-// different backend logic, but everything about *how* each instance of a
-// kind behaves (on/off, which scale field it reads, its thresholds, its
-// wording) is configured here rather than hardcoded.
-export type StatusCheckType =
+// The fixed catalog of scale-level check "kinds" — the math per kind is
+// backend logic, but whether it's on, which scale field it reads, its
+// thresholds, and its pass wording are all configured per SCALE, per SITE
+// (e.g. Totalization Limit can be on for one scale and off for another on
+// the same site). KPI is not in this list — it's a site-level check tied
+// to a Formula, not to any one scale.
+export type ScaleCheckType =
   | "totalizationLimit"
   | "batteryState"
   | "totalizerReset"
@@ -170,30 +171,43 @@ export type StatusCheckType =
   | "speedError"
   | "spikeError"
   | "zeroError"
-  | "kpiCheck"
   | "zeroCalibration"
   | "spanCalibration";
 
+// One check's configuration for one specific scale.
 export type StatusCheck = {
-  id: string;
-  checkType: StatusCheckType;
-  label: string; // editable display name shown as the PDF column heading
+  checkType: ScaleCheckType;
   enabled: boolean;
   // Which scale field this check reads (a fixed field like "totalizer"/"flow",
   // or a key from that site's ScaleColumnConfig custom columns, e.g. "load",
-  // "speed", "zeroCalSetpoint", "spanCalSetpoint"). Not used by kpiCheck.
+  // "speed", "zeroCalSetpoint", "spanCalSetpoint").
   scaleField?: string;
-  // For kpiCheck only: which Formulas entry (and its minKpi/maxKpi) to evaluate.
-  formulaName?: string;
   // Threshold values, keyed per check type (e.g. { limit: 750000 },
   // { deviationPercent: 5 }, { cutoffPercent: 20, tolerancePercent: 2 }).
   thresholds?: { [key: string]: number };
-  // Editable pass/fail wording so reports aren't stuck with words like
-  // "maintained"/"unsurpassed".
+  // Editable pass wording so reports aren't stuck with words like "maintained".
   passLabel?: string;
-  failLabel?: string;
 };
 
+// KPI is site-level: it's evaluated once per Formula (using that formula's
+// minKpi/maxKpi), not per scale.
+export type KpiCheckConfig = {
+  formulaName: string;
+  enabled: boolean;
+  passLabel?: string;
+};
+
+// One site's full Status Report configuration.
+export type SiteStatusReportConfig = {
+  kpiChecks: KpiCheckConfig[];
+  // Keyed by scale iccid (stable identifier for a scale within a site).
+  scaleChecks: { [iccid: string]: StatusCheck[] };
+};
+
+// The global Status Report config record — still one record covering every
+// site (every site runs in the twice-daily report), but each site now
+// carries its own per-scale check configuration instead of one flat list
+// applied uniformly everywhere.
 export type StatusReportConfig = {
-  checks: StatusCheck[];
+  sites: { [siteId: string]: SiteStatusReportConfig };
 };

@@ -15,9 +15,10 @@ const StatusReportPage = () => {
       <div>
         <h1 className="text-lg font-semibold">Status Report</h1>
         <p className="text-sm text-muted-foreground">
-          These criteria run against every site (test and prod) in the
-          twice-daily internal status report. Add, edit, or remove checks —
-          nothing here is site-specific.
+          Every site runs in the twice-daily internal status report, but what
+          gets checked is configured per site, per scale — pick a site below,
+          then turn checks on/off scale by scale. KPI checks are the
+          exception: they're evaluated once per site formula, not per scale.
         </p>
       </div>
 
@@ -25,8 +26,8 @@ const StatusReportPage = () => {
         <CardHeader>
           <CardTitle className="text-base">Check Criteria</CardTitle>
           <CardDescription>
-            Toggle checks on/off, set their thresholds, and set the wording
-            used for pass/fail on the report.
+            Toggle checks on/off, set their thresholds, and set the pass
+            wording used on the report.
           </CardDescription>
         </CardHeader>
         <CardContent>

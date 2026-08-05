@@ -1,4 +1,5 @@
 // middleware.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { fetchAuthSession } from "aws-amplify/auth/server";
 import { runWithAmplifyServerContext } from "@/utils/amplifyServerUtils";
@@ -14,7 +15,7 @@ const protectedRoutes = [
   "/stockpilereporting",
   "/progressivereporting",
   "/sitesimulator",
-  "/statusreport",
+  "/admin",
 ];
 
 export default async function middleware(request: NextRequest) {
@@ -29,25 +30,36 @@ export default async function middleware(request: NextRequest) {
 
   const response = NextResponse.next();
   let authenticated = false;
+  let isAdmin = false;
 
   try {
-    authenticated = await runWithAmplifyServerContext({
+    const result = await runWithAmplifyServerContext({
       nextServerContext: { request, response },
       operation: async (context) => {
         try {
           const session = await fetchAuthSession(context, {});
-          return !!session.tokens;
+          const groups =
+            (session.tokens?.idToken?.payload["cognito:groups"] as
+              | string[]
+              | undefined) ?? [];
+          return { authed: !!session.tokens, admin: groups.includes("ADMIN") };
         } catch {
-          return false;
+          return { authed: false, admin: false };
         }
       },
     });
+    authenticated = result.authed;
+    isAdmin = result.admin;
   } catch {
     authenticated = false;
   }
 
   if (isProtectedRoute && !authenticated) {
     return NextResponse.redirect(new URL("/", request.nextUrl));
+  }
+
+  if (path.startsWith("/admin") && authenticated && !isAdmin) {
+    return NextResponse.redirect(new URL("/landing", request.nextUrl));
   }
 
   if (isPublicRoute && authenticated) {

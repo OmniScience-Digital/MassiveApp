@@ -4,9 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Sun, Moon, User, Settings, LogOut, Menu, Loader2, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import Breadcrumbs from "./breadcrumbs";
 import {
@@ -16,7 +14,17 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { fetchAuthSession, signOut } from "aws-amplify/auth";
+import amplifyOutputs from "../../amplify_outputs.json";
 import Link from "next/link";
+
+const getIsTestEnv = () => {
+  const hostname = window.location.hostname;
+  if (hostname === "localhost") return true;
+  const redirectUris: string[] = amplifyOutputs.auth.oauth.redirect_sign_in_uri;
+  const matchedUri = redirectUris.find((uri) => uri.includes(hostname));
+  if (!matchedUri) return false;
+  return matchedUri.includes("test.");
+};
 
 export default function Navbar() {
   const router = useRouter();
@@ -24,27 +32,33 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState("");
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isTestEnv, setIsTestEnv] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Dark mode: purely from localStorage, no network call, instant
+    setIsTestEnv(getIsTestEnv());
+
     const savedDarkMode = localStorage.getItem("darkMode");
     const isDark = savedDarkMode === "true";
     setIsDarkMode(isDark);
     document.documentElement.classList.toggle("dark", isDark);
 
-    // User fetch is low priority — run after paint so it doesn't block render
     const fetchUser = async () => {
       try {
         const { tokens } = await fetchAuthSession();
-        setUser(tokens?.signInDetails?.loginId || "");
+        const email = tokens?.signInDetails?.loginId || "";
+        if (!email) {
+          router.replace("/");
+          return;
+        }
+        setUser(email);
         const groups = (tokens?.idToken?.payload["cognito:groups"] as string[] | undefined) ?? [];
         setIsAdmin(groups.includes("ADMIN"));
       } catch {
-        // not logged in or offline — silently ignore
+        router.replace("/");
       }
     };
-    // Use requestIdleCallback if available, else setTimeout
+
     if (typeof requestIdleCallback !== "undefined") {
       requestIdleCallback(fetchUser);
     } else {
@@ -62,53 +76,47 @@ export default function Navbar() {
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await signOut();
-      router.push("/");
-      setUser("");
+      await signOut({ global: true });
     } catch (error) {
-      console.error("Sign out error:", error);
+      console.warn("Sign out error:", error);
+    } finally {
+      setUser("");
+      router.replace("/");
       setIsSigningOut(false);
     }
   };
 
-  // Don't block render waiting for dark mode — default to light
   const darkModeReady = isDarkMode !== null;
 
   return (
-    <div className="fixed top-0 left-0 w-full z-50">
-        <header className="flex items-center justify-between bg-gray-700 p-4 border-b shadow-md">
-        {/* Logo */}
+    <div className="fixed top-0 left-0 w-full z-50 mb-10">
+      <header className="flex items-center justify-between bg-gray-700 p-4 border-b shadow-md">
         <Link href="/" className="flex items-center cursor-pointer">
-          <img
-            src="/assets/logo-2.png"
-            alt="Logo"
-            className="h-11 mr-4"
-            loading="lazy"
-          />
+          <img src="/assets/logo-2.png" alt="Logo" className="h-11 mr-4" loading="lazy" />
         </Link>
 
         {/* Mobile Menu */}
         <div className="sm:hidden">
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative focus:outline-none focus:ring-0 hover:bg-transparent cursor-pointer">
-                <Menu className="h-5 w-5 text-white" />
-              </Button>
+              {/* ✅ plain <button> instead of shadcn Button */}
+              <button className="flex items-center justify-center size-9 cursor-pointer focus:outline-none bg-transparent border-none hover:bg-transparent">
+                <Menu className="h-4 w-4 text-white" />
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 z-[100]">
               {darkModeReady && (
                 <DropdownMenuItem onClick={(e) => { e.preventDefault(); setTimeout(() => setMenuOpen(false), 200); }}>
                   <div className="flex items-center gap-2">
-                    <Sun className="h-5 w-5" />
+                    <Sun className="h-4 w-4" />
                     <Switch checked={!!isDarkMode} onCheckedChange={toggleDarkMode} />
-                    <Moon className="h-5 w-5" />
+                    <Moon className="h-4 w-4" />
                   </div>
                 </DropdownMenuItem>
               )}
               {user && (
                 <DropdownMenuItem className="text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                  <User className="h-4 w-4" />
-                  {user}
+                  <User className="h-4 w-4" /> {user}
                 </DropdownMenuItem>
               )}
               {isAdmin && (
@@ -132,21 +140,22 @@ export default function Navbar() {
         <div className="hidden sm:flex items-center gap-4">
           {darkModeReady && (
             <div className="flex items-center gap-2">
-              <Sun className="h-5 w-5 text-white" />
+              <Sun className="h-4 w-4 text-white" />
               <Switch checked={!!isDarkMode} onCheckedChange={toggleDarkMode} />
-              <Moon className="h-5 w-5 text-white" />
+              <Moon className="h-4 w-4 text-white" />
             </div>
           )}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild className="cursor-pointer">
-              <Button variant="ghost" size="icon" className="focus:outline-none focus:ring-0 hover:bg-transparent">
-                <User className="h-5 w-5 text-white" />
-              </Button>
+            <DropdownMenuTrigger asChild>
+              {/* ✅ plain <button> instead of shadcn Button */}
+              <button className="flex items-center justify-center size-9 cursor-pointer focus:outline-none bg-transparent border-none hover:bg-transparent">
+                <User className="h-4 w-4 text-white" />
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="z-[100]">
               {user && (
                 <DropdownMenuItem className="text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                  <User className="h-5 w-5" /> {user}
+                  <User className="h-4 w-4" /> {user}
                 </DropdownMenuItem>
               )}
               {isAdmin && (
@@ -166,11 +175,19 @@ export default function Navbar() {
           </DropdownMenu>
         </div>
       </header>
+
+      {isTestEnv && (
+        <div className="flex items-center justify-center gap-1.5 bg-gray-200/60 dark:bg-gray-700/40 text-orange-500 dark:text-orange-400 text-[10px] py-0.5 tracking-wider">
+          <span>⚠</span> TEST ENV <span>⚠</span>
+        </div>
+      )}
+
       <Breadcrumbs />
+
       {isSigningOut && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
           <div className="flex items-center gap-2 p-4 bg-white dark:bg-gray-800 rounded-md shadow-md">
-            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
             <span className="text-sm font-medium text-gray-800 dark:text-gray-100">Signing out...</span>
           </div>
         </div>

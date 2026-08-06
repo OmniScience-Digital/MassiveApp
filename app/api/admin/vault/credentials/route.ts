@@ -1,3 +1,5 @@
+// app/api/admin/vault/credentials/route.ts
+
 import { NextResponse } from "next/server";
 import { requireAdmin, vaultDataClient } from "@/lib/admin-auth";
 import { encryptFields } from "@/lib/vault-crypto";
@@ -35,16 +37,6 @@ export async function POST(request: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { data: lock } = await vaultDataClient.models.VaultLock.get({
-    lockId: "GLOBAL",
-  });
-  if (!lock || lock.holderId !== admin.userId || new Date(lock.expiresAt) < new Date()) {
-    return NextResponse.json(
-      { error: "You must hold the vault lock to add a credential" },
-      { status: 409 },
-    );
-  }
-
   const body = await request.json();
   const { kind, name, fields, notes, url, tags } = body as {
     kind: string;
@@ -79,15 +71,6 @@ export async function POST(request: Request) {
   if (errors) {
     return NextResponse.json({ error: errors[0]?.message ?? "Create failed" }, { status: 500 });
   }
-
-  await vaultDataClient.models.VaultAuditLog.create({
-    action: "create",
-    actorId: admin.userId,
-    actorName: admin.displayName,
-    credentialId: created?.id,
-    credentialName: name,
-    timestamp: new Date().toISOString(),
-  });
 
   return NextResponse.json({ id: created?.id });
 }

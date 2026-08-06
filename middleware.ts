@@ -33,7 +33,7 @@ export default async function middleware(request: NextRequest) {
   let isAdmin = false;
 
   try {
-    const result = await runWithAmplifyServerContext({
+    const sessionCheck = runWithAmplifyServerContext({
       nextServerContext: { request, response },
       operation: async (context) => {
         try {
@@ -48,6 +48,11 @@ export default async function middleware(request: NextRequest) {
         }
       },
     });
+    // Fail fast instead of hanging the whole page load if Cognito is slow/unreachable.
+    const timeout = new Promise<{ authed: boolean; admin: boolean }>((resolve) =>
+      setTimeout(() => resolve({ authed: false, admin: false }), 5000),
+    );
+    const result = await Promise.race([sessionCheck, timeout]);
     authenticated = result.authed;
     isAdmin = result.admin;
   } catch {
@@ -60,6 +65,10 @@ export default async function middleware(request: NextRequest) {
 
   if (path.startsWith("/admin") && authenticated && !isAdmin) {
     return NextResponse.redirect(new URL("/landing", request.nextUrl));
+  }
+
+  if (path === "/admin" && isAdmin) {
+    return NextResponse.redirect(new URL("/admin/credentials", request.nextUrl));
   }
 
   if (isPublicRoute && authenticated) {

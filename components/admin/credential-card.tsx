@@ -1,5 +1,7 @@
 "use client";
 
+// components/admin/credential-card.tsx
+
 import { useState } from "react";
 import { Eye, EyeOff, Copy, Check, ExternalLink, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,11 +28,9 @@ export type MaskedCredential = {
 
 export function CredentialCard({
   credential,
-  canReveal,
   onDeleted,
 }: {
   credential: MaskedCredential;
-  canReveal: boolean;
   onDeleted: () => void | Promise<void>;
 }) {
   const [revealed, setRevealed] = useState<Record<string, string> | null>(null);
@@ -124,7 +124,7 @@ export function CredentialCard({
           size="sm"
           className="w-full"
           onClick={toggleReveal}
-          disabled={!canReveal || loading}
+          disabled={loading}
         >
           {loading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -133,7 +133,7 @@ export function CredentialCard({
           ) : (
             <Eye className="mr-2 h-4 w-4" />
           )}
-          {revealed ? "Hide" : canReveal ? "Reveal" : "Enter vault to reveal"}
+          {revealed ? "Hide" : "Reveal"}
         </Button>
 
         {error && <p className="text-xs text-destructive">{error}</p>}

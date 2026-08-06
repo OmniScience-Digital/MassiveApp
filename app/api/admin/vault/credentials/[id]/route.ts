@@ -1,28 +1,16 @@
+// app/api/admin/vault/credentials/[id]/route.ts
+
 import { NextResponse } from "next/server";
 import { requireAdmin, vaultDataClient } from "@/lib/admin-auth";
 import { decryptFields, encryptFields } from "@/lib/vault-crypto";
 
-async function assertHoldsLock(userId: string) {
-  const { data: lock } = await vaultDataClient.models.VaultLock.get({
-    lockId: "GLOBAL",
-  });
-  return !!lock && lock.holderId === userId && new Date(lock.expiresAt) > new Date();
-}
-
-// GET: reveal decrypted field values for one credential. Requires the lock.
+// GET: reveal decrypted field values for one credential.
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } },
 ) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  if (!(await assertHoldsLock(admin.userId))) {
-    return NextResponse.json(
-      { error: "You must hold the vault lock to reveal a credential" },
-      { status: 409 },
-    );
-  }
 
   const { data: credential } = await vaultDataClient.models.Credential.get({
     id: params.id,
@@ -32,33 +20,16 @@ export async function GET(
   }
 
   const fields = decryptFields(credential.fieldsCipher);
-
-  await vaultDataClient.models.VaultAuditLog.create({
-    action: "view",
-    actorId: admin.userId,
-    actorName: admin.displayName,
-    credentialId: credential.id,
-    credentialName: credential.name,
-    timestamp: new Date().toISOString(),
-  });
-
   return NextResponse.json({ fields });
 }
 
-// PATCH: update a credential's fields/notes/url/tags. Requires the lock.
+// PATCH: update a credential's fields/notes/url/tags.
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
 ) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  if (!(await assertHoldsLock(admin.userId))) {
-    return NextResponse.json(
-      { error: "You must hold the vault lock to edit a credential" },
-      { status: 409 },
-    );
-  }
 
   const body = await request.json();
   const { name, fields, notes, url, tags } = body as {
@@ -83,26 +54,17 @@ export async function PATCH(
     update.lastRotatedAt = new Date().toISOString();
   }
 
-  const { data: updated, errors } = await vaultDataClient.models.Credential.update(
+  const { errors } = await vaultDataClient.models.Credential.update(
     update as { id: string },
   );
   if (errors) {
     return NextResponse.json({ error: errors[0]?.message ?? "Update failed" }, { status: 500 });
   }
 
-  await vaultDataClient.models.VaultAuditLog.create({
-    action: "update",
-    actorId: admin.userId,
-    actorName: admin.displayName,
-    credentialId: params.id,
-    credentialName: updated?.name,
-    timestamp: new Date().toISOString(),
-  });
-
   return NextResponse.json({ ok: true });
 }
 
-// DELETE: remove a credential. Requires the lock.
+// DELETE: remove a credential.
 export async function DELETE(
   _request: Request,
   { params }: { params: { id: string } },
@@ -110,27 +72,6 @@ export async function DELETE(
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  if (!(await assertHoldsLock(admin.userId))) {
-    return NextResponse.json(
-      { error: "You must hold the vault lock to delete a credential" },
-      { status: 409 },
-    );
-  }
-
-  const { data: existing } = await vaultDataClient.models.Credential.get({
-    id: params.id,
-  });
-
   await vaultDataClient.models.Credential.delete({ id: params.id });
-
-  await vaultDataClient.models.VaultAuditLog.create({
-    action: "delete",
-    actorId: admin.userId,
-    actorName: admin.displayName,
-    credentialId: params.id,
-    credentialName: existing?.name,
-    timestamp: new Date().toISOString(),
-  });
-
   return NextResponse.json({ ok: true });
 }

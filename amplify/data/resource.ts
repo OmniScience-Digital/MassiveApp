@@ -67,31 +67,6 @@ const schema = a.schema({
       lastRotatedAt: a.datetime(),
     })
     .authorization((allow) => [allow.group("ADMIN")]),
-
-  // Exclusive "one admin in the vault at a time" lock. Single global row.
-  VaultLock: a
-    .model({
-      lockId: a.string().required(), // always "GLOBAL"
-      holderId: a.string().required(),
-      holderName: a.string().required(),
-      acquiredAt: a.datetime().required(),
-      expiresAt: a.datetime().required(),
-    })
-    .identifier(["lockId"])
-    .authorization((allow) => [allow.group("ADMIN")]),
-
-  // Append-only audit trail: every lock/unlock/view/create/edit/delete.
-  VaultAuditLog: a
-    .model({
-      action: a.string().required(), // "lock" | "unlock" | "takeover" | "view" | "create" | "update" | "delete"
-      actorId: a.string().required(),
-      actorName: a.string().required(),
-      credentialId: a.string(),
-      credentialName: a.string(),
-      detail: a.string(),
-      timestamp: a.datetime().required(),
-    })
-    .authorization((allow) => [allow.group("ADMIN")]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

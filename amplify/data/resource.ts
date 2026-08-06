@@ -67,6 +67,18 @@ const schema = a.schema({
       lastRotatedAt: a.datetime(),
     })
     .authorization((allow) => [allow.group("ADMIN")]),
+  // --- Telegram group monitor ------------------------------------------
+  // One well-known row (id: "global"), same pattern as StatusReportConfig.
+  // companyUserIds excludes internal staff from triggering alerts;
+  // keywords are matched case-insensitively against client messages in
+  // monitored groups; alertChatId is where the bot sends the alert.
+  TelegramMonitorConfig: a
+    .model({
+      companyUserIds: a.string().array(), // Telegram numeric user ids, as strings
+      keywords: a.string().array(), // case-insensitive substrings to watch for
+      alertChatId: a.string(), // chat id the bot alerts when something matches
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

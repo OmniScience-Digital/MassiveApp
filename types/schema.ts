@@ -211,3 +211,15 @@ export type SiteStatusReportConfig = {
 export type StatusReportConfig = {
   sites: { [siteId: string]: SiteStatusReportConfig };
 };
+
+ 
+// One well-known record (id: "global") backing the Telegram group monitor.
+// companyUserIds excludes internal staff (by Telegram numeric user id, as
+// a string) from ever triggering an alert; keywords are matched
+// case-insensitively against messages in monitored groups; alertChatId is
+// the chat the bot posts alerts to.
+export type TelegramMonitorConfig = {
+  companyUserIds: string[];
+  keywords: string[];
+  alertChatId: string;
+};

@@ -60,11 +60,28 @@ function ChipListEditor({
               addValue();
             }
           }}
+          // Also commit on blur (e.g. clicking Save right after typing) so
+          // a typed-but-not-yet-added word never gets silently dropped.
+          onBlur={addValue}
         />
-        <Button type="button" variant="outline" size="icon" onClick={addValue}>
+        <Button
+          type="button"
+          size="icon"
+          onClick={addValue}
+          className={
+            draft.trim()
+              ? "bg-green-600 hover:bg-green-700 text-white animate-pulse ring-2 ring-green-400 ring-offset-2"
+              : "bg-primary text-primary-foreground hover:bg-primary/90"
+          }
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Type a value, then press <strong>Enter</strong> or tap{" "}
+        <strong>the + button</strong> to add it — it must appear as a tag
+        below before saving, or it won't be included.
+      </p>
       <div className="flex flex-wrap gap-2">
         {values.length === 0 && (
           <span className="text-xs text-muted-foreground">None added yet</span>
@@ -128,19 +145,26 @@ export default function TelegramMonitorConfigPanel() {
         <CardHeader>
           <CardTitle className="text-base">Excluded Company Members</CardTitle>
           <CardDescription>
-            Messages from these Telegram user IDs never trigger an alert —
-            add every internal staff member's numeric Telegram ID here.
+            Messages from these people never trigger an alert. Managed only
+            from inside Telegram by a group admin — reply-tag someone and
+            send <code className="text-xs">ignore-Omni @username</code> to
+            add them, or <code className="text-xs">unignore-Omni @username</code>{" "}
+            to remove them. This list is read-only here.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ChipListEditor
-            values={config.companyUserIds}
-            placeholder="e.g. 123456789"
-            inputType="text"
-            onChange={(companyUserIds) =>
-              setConfig((prev) => ({ ...prev, companyUserIds }))
-            }
-          />
+          <div className="flex flex-wrap gap-2">
+            {config.companyUserIds.length === 0 && (
+              <span className="text-xs text-muted-foreground">
+                No one excluded yet
+              </span>
+            )}
+            {config.companyUserIds.map((value) => (
+              <Badge key={value} variant="secondary">
+                {value}
+              </Badge>
+            ))}
+          </div>
         </CardContent>
       </Card>
 

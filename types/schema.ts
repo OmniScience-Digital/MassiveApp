@@ -214,12 +214,22 @@ export type StatusReportConfig = {
 
  
 // One well-known record (id: "global") backing the Telegram group monitor.
-// companyUserIds excludes internal staff (by Telegram numeric user id, as
-// a string) from ever triggering an alert; keywords are matched
-// case-insensitively against messages in monitored groups; alertChatId is
-// the chat the bot posts alerts to.
+// companyUserIds excludes internal staff from personal-DM keyword routing
+// (their matches route to alertChatId instead); alertChatId is the
+// centralized chat for tag matches (always) + ignored-sender keyword
+// matches. NOTE: keywords used to live on this record as one shared global
+// list — moved to per-user records (see UserKeywordEntry below).
 export type TelegramMonitorConfig = {
   companyUserIds: string[];
-  keywords: string[];
   alertChatId: string;
+};
+ 
+// One record per staff member (id = their Telegram numeric user id),
+// holding their own personal keyword list. Self-managed via chat commands
+// only — dashboard shows this read-only.
+export type UserKeywordEntry = {
+  userId: string;
+  username?: string;
+  displayName?: string;
+  keywords: string[];
 };

@@ -2,13 +2,14 @@
 import { TelegramMonitorConfig } from "@/types/schema";
 import { client } from "./schemaClient";
 
-// One shared record for the whole monitor (exclusion list, keywords, and
-// where alerts get sent) — same pattern as StatusReportConfig.
+// One shared record for the whole monitor — ignore list + centralized
+// alert destination. NOTE: keywords used to live here as one shared global
+// list; as of the per-user keyword revision they no longer do — see
+// telegramUserKeywords.Service.tsx for the per-person keyword view.
 const GLOBAL_CONFIG_ID = "global";
 
 const emptyConfig: TelegramMonitorConfig = {
   companyUserIds: [],
-  keywords: [],
   alertChatId: "",
 };
 
@@ -34,7 +35,6 @@ export const getTelegramMonitorConfig = async (): Promise<TelegramMonitorConfig>
       companyUserIds: (data.companyUserIds ?? []).filter(
         (v): v is string => v !== null,
       ),
-      keywords: (data.keywords ?? []).filter((v): v is string => v !== null),
       alertChatId: data.alertChatId ?? "",
     };
   } catch (error) {
@@ -58,12 +58,11 @@ export const saveTelegramMonitorConfig = async (
     }
 
     // companyUserIds is deliberately NOT included here — it's only ever
-    // managed via the ignore-Omni / unignore-Omni in-chat commands. Sending
-    // it back from a possibly-stale dashboard load could overwrite a more
-    // recent chat-driven change.
+    // managed via the ignore / unignore in-chat commands. Sending it back
+    // from a possibly-stale dashboard load could overwrite a more recent
+    // chat-driven change.
     const payload = {
       id: GLOBAL_CONFIG_ID,
-      keywords: config.keywords,
       alertChatId: config.alertChatId,
     };
 

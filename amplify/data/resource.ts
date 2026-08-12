@@ -69,14 +69,28 @@ const schema = a.schema({
     .authorization((allow) => [allow.group("ADMIN")]),
   // --- Telegram group monitor ------------------------------------------
   // One well-known row (id: "global"), same pattern as StatusReportConfig.
-  // companyUserIds excludes internal staff from triggering alerts;
-  // keywords are matched case-insensitively against client messages in
-  // monitored groups; alertChatId is where the bot sends the alert.
+  // companyUserIds excludes internal staff from personal-DM keyword routing
+  // (their keyword matches route to alertChatId instead); alertChatId is
+  // the centralized chat used for tag matches (always) and keyword matches
+  // from ignored senders.
+  // NOTE: keywords used to live here as one shared global list — as of the
+  // per-user keyword revision, keywords moved to TelegramUserKeyword below.
   TelegramMonitorConfig: a
     .model({
       companyUserIds: a.string().array(), // Telegram numeric user ids, as strings
-      keywords: a.string().array(), // case-insensitive substrings to watch for
-      alertChatId: a.string(), // chat id the bot alerts when something matches
+      alertChatId: a.string(), // centralized chat id
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+
+  // One row per staff member (id = their Telegram numeric user id), holding
+  // their own personal keyword list. Self-managed via the @<bot> keyword=...,
+  // delete_keyword=..., print_keyword chat commands — this table is
+  // READ-ONLY from the dashboard, same as companyUserIds above.
+  TelegramUserKeyword: a
+    .model({
+      username: a.string(),
+      displayName: a.string(),
+      keywords: a.string().array(),
     })
     .authorization((allow) => [allow.publicApiKey()]),
 });

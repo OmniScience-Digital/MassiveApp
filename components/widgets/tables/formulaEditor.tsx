@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ReportItem } from "@/types/schema";
 import { createFormula, updateFormula } from "@/service/formulas.Service";
 import ResponseModal from "../response";
+import { isShownInHourly, isShownInProgressive } from "@/lib/formulaPlacement";
 
 interface FormulaEditorProps {
   scales: ReportItem["scales"];
@@ -63,27 +64,30 @@ export const FormulaEditor = ({
     setIsDialogOpen(true);
   };
 
-  //make a virtual formula
-  const handleScaleToggle = async (formula: ReportItem["formulas"][0]) => {
+  // Toggle one checkbox column (virtual / hourly / progressive) and save straight away
+  const handleFlagToggle = async (
+    formula: ReportItem["formulas"][0],
+    field: "virtualformula" | "showInHourly" | "showInProgressive",
+  ) => {
     try {
-      // Safely handle undefined virtualformula
-      const currentStatus = formula.virtualformula ?? false;
+      const currentStatus =
+        field === "virtualformula"
+          ? (formula.virtualformula ?? false)
+          : field === "showInHourly"
+            ? isShownInHourly({ ...formula, virtualformula: false })
+            : isShownInProgressive({ ...formula, virtualformula: false });
       const updatedStatus = !currentStatus;
 
       // Optimistically update local state first
       setFormulas((prevFormulas) =>
         prevFormulas.map((f) =>
           f.formulaname === formula.formulaname
-            ? { ...f, virtualformula: updatedStatus }
+            ? { ...f, [field]: updatedStatus }
             : f,
         ),
       );
 
-      // Update in database
-      const updatedFormula = {
-        ...formula,
-        virtualformula: updatedStatus,
-      };
+      const updatedFormula = { ...formula, [field]: updatedStatus };
 
       const newformula = await updateFormula(id as string, updatedFormula);
 
@@ -100,15 +104,24 @@ export const FormulaEditor = ({
       // Update parent component if needed
       onSave(updatedFormula);
 
+      const labels = {
+        virtualformula: updatedStatus
+          ? "Formula marked as virtual"
+          : "Formula marked as regular",
+        showInHourly: updatedStatus
+          ? "Formula will show in the hourly report"
+          : "Formula removed from the hourly report",
+        showInProgressive: updatedStatus
+          ? "Formula will show in the progressive report"
+          : "Formula removed from the progressive report",
+      };
       setSuccessful(true);
-      setMessage(
-        `Formula marked as ${updatedStatus ? "virtual" : "regular"} successfully`,
-      );
+      setMessage(`${labels[field]} successfully`);
       setShow(true);
     } catch (error) {
-      console.error("Error toggling virtual status:", error);
+      console.error("Error toggling formula flag:", error);
       setSuccessful(false);
-      setMessage("Failed to update formula status");
+      setMessage("Failed to update formula");
       setShow(true);
     }
   };
@@ -120,6 +133,8 @@ export const FormulaEditor = ({
       virtualformula: false,
       minKpi: "",
       maxKpi: "",
+      showInHourly: false,
+      showInProgressive: true,
     });
     setIsDialogOpen(true);
   };
@@ -240,6 +255,8 @@ export const FormulaEditor = ({
             <TableHead>Min KPI</TableHead>
             <TableHead>Max KPI</TableHead>
             <TableHead>VS</TableHead>
+            <TableHead>Hourly</TableHead>
+            <TableHead>Progressive</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -256,7 +273,37 @@ export const FormulaEditor = ({
                 <Checkbox
                   id={`formula-${formula.formulaname}`}
                   checked={formula.virtualformula}
-                  onCheckedChange={() => handleScaleToggle(formula)}
+                  onCheckedChange={() => handleFlagToggle(formula, "virtualformula")}
+                />
+              </TableCell>
+              <TableCell>
+                <Checkbox
+                  id={`hourly-${formula.formulaname}`}
+                  checked={isShownInHourly(formula)}
+                  disabled={formula.virtualformula}
+                  title={
+                    formula.virtualformula
+                      ? "Virtual formulas are never printed"
+                      : undefined
+                  }
+                  onCheckedChange={() =>
+                    handleFlagToggle(formula, "showInHourly")
+                  }
+                />
+              </TableCell>
+              <TableCell>
+                <Checkbox
+                  id={`progressive-${formula.formulaname}`}
+                  checked={isShownInProgressive(formula)}
+                  disabled={formula.virtualformula}
+                  title={
+                    formula.virtualformula
+                      ? "Virtual formulas are never printed"
+                      : undefined
+                  }
+                  onCheckedChange={() =>
+                    handleFlagToggle(formula, "showInProgressive")
+                  }
                 />
               </TableCell>
 
@@ -335,6 +382,44 @@ export const FormulaEditor = ({
             </div>
 
             <div>
+              <label className="block text-sm font-medium mb-1">
+                Show in report
+              </label>
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={
+                      editingFormula ? isShownInHourly(editingFormula) : false
+                    }
+                    disabled={editingFormula?.virtualformula}
+                    onCheckedChange={(checked) =>
+                      setEditingFormula((prev) =>
+                        prev ? { ...prev, showInHourly: checked === true } : null,
+                      )
+                    }
+                  />
+                  Hourly
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={
+                      editingFormula ? isShownInProgressive(editingFormula) : true
+                    }
+                    disabled={editingFormula?.virtualformula}
+                    onCheckedChange={(checked) =>
+                      setEditingFormula((prev) =>
+                        prev
+                          ? { ...prev, showInProgressive: checked === true }
+                          : null,
+                      )
+                    }
+                  />
+                  Progressive
+                </label>
+              </div>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-1">Formular</label>
               <div className="p-3 border rounded bg-gray-50 min-h-12 font-mono mb-2">
                 {editingFormula?.formula || (
@@ -363,9 +448,9 @@ export const FormulaEditor = ({
               </div>
 
               <div className="grid grid-cols-4 gap-2 mb-2">
-                {scales.map((scale) => (
+                {scales.map((scale, index) => (
                   <Button
-                    key={scale.iccid}
+                    key={`${scale.iccid}-${index}`}
                     variant="outline"
                     onClick={() => addToFormula(scale.scalename)}
                   >

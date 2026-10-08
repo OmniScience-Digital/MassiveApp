@@ -59,3 +59,33 @@ export const runtelegramReportwithDate = async (
     throw error;
   }
 };
+
+// Runs the hourly Telegram report for one site on demand (same as the scheduled hourly run).
+export const runHourlyReport = async (
+  sitedata: ReportItem,
+  // endTime is the END of the hour: 08:00 reports 07:00-08:00 on endDate (default today).
+  // Omit both for the latest hour.
+  options: { endDate?: string; endTime?: string } = {},
+) => {
+  try {
+    const response = await fetch(`${constants.securebaseUrlprod}/runhourlyreport`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.NEXT_PUBLIC_API_SECRET_KEY ?? "",
+      },
+      body: JSON.stringify({ sitedata: sitedata, ...options }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || `Request failed with status: ${response.status}`);
+    }
+
+    return data as { status: "sent" | "skipped"; message: string };
+  } catch (error) {
+    console.error("Error:", error);
+    throw error;
+  }
+};

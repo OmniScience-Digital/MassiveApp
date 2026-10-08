@@ -446,12 +446,12 @@ export const StatusReport = () => {
 
               {/* Scale Checks — per scale, per check kind */}
               <div className="space-y-2">
-                {scales.map((scale) => {
+                {scales.map((scale, index) => {
                   const isOpen = expanded.has(scale.iccid);
                   const checks = scaleChecks[scale.iccid] || [];
                   const onCount = checks.filter((c) => c.enabled).length;
                   return (
-                    <Card key={scale.iccid}>
+                    <Card key={`${scale.iccid}-${index}`}>
                       <button
                         type="button"
                         onClick={() => toggleExpanded(scale.iccid)}

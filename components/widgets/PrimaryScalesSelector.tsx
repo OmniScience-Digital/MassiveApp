@@ -173,10 +173,10 @@ export const PrimaryScalesSelector = ({
         <div className="space-y-4">
           <div className="space-y-2">
             {/* All scales - both normal and custom */}
-            {allDisplayScales.map((scale) => (
-              <div key={scale.iccid} className="flex items-center space-x-2">
+            {allDisplayScales.map((scale, index) => (
+              <div key={`${scale.iccid}-${index}`} className="flex items-center space-x-2">
                 <Checkbox
-                  id={`scale-${scale.iccid}`}
+                  id={`scale-${scale.iccid}-${index}`}
                   checked={
                     selectedScales.includes(scale.scalename) &&
                     !removedScales.includes(scale.scalename)
@@ -184,7 +184,7 @@ export const PrimaryScalesSelector = ({
                   onCheckedChange={() => handleScaleToggle(scale.scalename)}
                 />
                 <label
-                  htmlFor={`scale-${scale.iccid}`}
+                  htmlFor={`scale-${scale.iccid}-${index}`}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center"
                 >
                   {scale.scalename}

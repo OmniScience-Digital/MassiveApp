@@ -83,6 +83,9 @@ export type ReportItem = {
     virtualformula: boolean;
     minKpi?: string;
     maxKpi?: string;
+    // Where the formula is printed. Unset = legacy default (hourly: "Yield" only, progressive: all).
+    showInHourly?: boolean;
+    showInProgressive?: boolean;
   }[];
 
   dynamic_inputs: {

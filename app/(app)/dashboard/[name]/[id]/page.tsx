@@ -32,6 +32,7 @@ import SiteConstants from "@/components/widgets/siteconstants/siteConstants";
 import DynamicinputList from "@/components/widgets/headers/dynamicinputList";
 import SharedTable from "@/components/widgets/scales/Scales";
 import { FormulaEditor } from "@/components/widgets/tables/formulaEditor";
+import { HourlyReportPanel } from "@/components/dashboard/hourlyReportPanel";
 import { PrimaryScalesSelector } from "@/components/widgets/PrimaryScalesSelector";
 import ResponseModal from "@/components/widgets/response";
 import { deleteFormula } from "@/service/formulas.Service";
@@ -716,7 +717,7 @@ export default function DashboardPage() {
                 onValueChange={setActiveTab}
                 className="w-full p-4"
               >
-                <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+                <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
                   <TabsTrigger
                     value="schedules"
                     className="flex items-center gap-2"
@@ -746,6 +747,14 @@ export default function DashboardPage() {
                   >
                     <Calculator className="h-4 w-4" />
                     <span className="hidden sm:inline">Formulas</span>
+                  </TabsTrigger>
+
+                  <TabsTrigger
+                    value="hourly"
+                    className="flex items-center gap-2"
+                  >
+                    <Clock className="h-4 w-4" />
+                    <span className="hidden sm:inline">Hourly</span>
                   </TabsTrigger>
 
                   <TabsTrigger value="rpt" className="flex items-center gap-2">
@@ -913,6 +922,14 @@ export default function DashboardPage() {
                       />
                     </CardContent>
                   </Card>
+                </TabsContent>
+
+                {/* Hourly */}
+                <TabsContent value="hourly" className="space-y-4 mt-4">
+                  <HourlyReportPanel
+                    sitedata={sitedata as ReportItem}
+                    formulas={formulas}
+                  />
                 </TabsContent>
 
                 {/* RPT */}
